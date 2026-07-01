@@ -1,0 +1,83 @@
+# Codemagic CI — Lumio'yu Mac OLMADAN bulutta derleyip mağazaya gönderir.
+#
+# Kurulum (tek sefer, codemagic.io > uygulaman > Settings):
+#  1) Bu repoyu Codemagic'e bağla.
+#  2) iOS: "App Store Connect" entegrasyonu ekle (App Store Connect API Key:
+#     Issuer ID + Key ID + .p8) — otomatik imzalama bunu kullanır.
+#  3) Aşağıdaki BUNDLE_ID zaten com.lumio.game; App Store Connect'te bu bundle
+#     ile bir uygulama kaydı oluştur.
+#  4) (Android sonra) Google Play service account JSON'unu ekle.
+#
+# Not: iOS derlemesi Codemagic'in macOS makinesinde çalışır; senin Mac'in gerekmez.
+
+workflows:
+  ios-appstore:
+    name: Lumio iOS (App Store)
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      groups:
+        - appstore # App Store Connect API key değişkenlerini buraya koy
+      vars:
+        BUNDLE_ID: "com.lumio.game"
+        XCODE_SCHEME: "App"
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Web build (Vite)
+        script: |
+          npm ci
+          npm run build
+      - name: Capacitor iOS ekle & senkronize
+        script: |
+          npm i @capacitor/core @capacitor/ios
+          npx cap add ios || true
+          npx cap sync ios
+      - name: CocoaPods
+        script: |
+          cd ios/App && pod install
+      - name: Otomatik imzalama (App Store Connect API)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Archive & IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # İncelemeye otomatik göndermek istersen:
+        # submit_to_app_store: false
+
+  android-play:
+    name: Lumio Android (Play)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      vars:
+        BUNDLE_ID: "com.lumio.game"
+      node: 20
+    scripts:
+      - name: Web build
+        script: |
+          npm ci
+          npm run build
+      - name: Capacitor Android ekle & senkronize
+        script: |
+          npm i @capacitor/core @capacitor/android
+          npx cap add android || true
+          npx cap sync android
+      - name: Gradle AAB
+        script: |
+          cd android && ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab

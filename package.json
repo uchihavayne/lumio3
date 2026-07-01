@@ -1,0 +1,19 @@
+{
+  "name": "harfika",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Harfika - kelime macerasi (Words of Wonders tarzi, ozgun mekanikli mobil kelime oyunu)",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run build && npx cap sync android && npx cap open android",
+    "cap:ios": "npm run build && npx cap sync ios && npx cap open ios"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

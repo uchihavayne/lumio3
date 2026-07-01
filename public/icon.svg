@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2350"/>
+      <stop offset="0.55" stop-color="#0b1026"/>
+      <stop offset="1" stop-color="#070a1a"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffcf6b" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe6a8"/>
+      <stop offset="1" stop-color="#f4a52a"/>
+    </linearGradient>
+    <radialGradient id="core" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#fff6df"/>
+      <stop offset="0.6" stop-color="#ffd873"/>
+      <stop offset="1" stop-color="#f4a52a"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- yildizlar -->
+  <circle cx="96" cy="120" r="3" fill="#dce6ff" opacity="0.8"/>
+  <circle cx="420" cy="150" r="2.5" fill="#dce6ff" opacity="0.7"/>
+  <circle cx="410" cy="392" r="2.5" fill="#dce6ff" opacity="0.6"/>
+  <circle cx="110" cy="410" r="2" fill="#dce6ff" opacity="0.6"/>
+
+  <!-- isik halesi -->
+  <circle cx="256" cy="270" r="180" fill="url(#halo)"/>
+
+  <!-- Fener -->
+  <g stroke="url(#gold)" stroke-width="14" fill="none" stroke-linecap="round">
+    <!-- asma halkasi -->
+    <path d="M256 92 q-22 8 -22 30" />
+    <path d="M256 92 q22 8 22 30" />
+  </g>
+  <!-- ust kapak -->
+  <path d="M212 150 h88 l-14 -22 h-60 z" fill="url(#gold)"/>
+  <!-- govde -->
+  <rect x="200" y="150" width="112" height="182" rx="30" fill="url(#gold)"/>
+  <!-- cam / isik -->
+  <rect x="220" y="170" width="72" height="142" rx="22" fill="url(#core)"/>
+  <!-- ic ateşböceği parlaklik -->
+  <circle cx="256" cy="240" r="16" fill="#fffef2"/>
+  <!-- alt topuz -->
+  <rect x="236" y="330" width="40" height="20" rx="8" fill="url(#gold)"/>
+
+  <!-- yan ateşböcekleri -->
+  <circle cx="150" cy="250" r="7" fill="#fff6df"/>
+  <circle cx="150" cy="250" r="16" fill="#ffcf6b" opacity="0.35"/>
+  <circle cx="366" cy="300" r="6" fill="#fff6df"/>
+  <circle cx="366" cy="300" r="14" fill="#ffcf6b" opacity="0.35"/>
+</svg>

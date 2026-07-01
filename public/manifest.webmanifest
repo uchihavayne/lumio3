@@ -1,0 +1,22 @@
+{
+  "name": "Lumio: Word Puzzle",
+  "short_name": "Lumio",
+  "description": "Connect letters, fill crosswords, learn words. Endless levels, 6 languages, offline. A relaxing word connect & crossword game.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1026",
+  "theme_color": "#0b1026",
+  "categories": ["games", "education", "word"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
