@@ -8,8 +8,10 @@
 //
 // Not: anon anahtari herkese acik (RLS ile guvenlik saglanir) — gizli degildir.
 
-export const SUPABASE_URL = ""; // ör. "https://xxxx.supabase.co"
-export const SUPABASE_ANON_KEY = ""; // ör. "eyJhbGciOi..."
+export const SUPABASE_URL = "https://txafbaltlcejemiivcov.supabase.co";
+// "publishable" (istemci-güvenli) anahtar. Gizli "secret" anahtarı ASLA buraya
+// koymayın — o yalnızca sunucu tarafı içindir.
+export const SUPABASE_ANON_KEY = "sb_publishable_s1TOhWe4BtEtLLxai_A9hw_G89maKk5";
 
 export function isOnlineLeaderboard(): boolean {
   return SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
