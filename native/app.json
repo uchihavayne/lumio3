@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Lumio: Word Puzzle",
+    "slug": "lumio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b1026",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0b1026"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.lumio.game",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIRequiresFullScreen": true
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.lumio.game",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0b1026"
+      }
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a2bcc71f-e9f4-4021-86d3-9e47430449d1"
+      }
+    },
+    "owner": "aionstudio"
+  }
+}

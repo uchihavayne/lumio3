@@ -6,3 +6,5 @@ dist
 # Capacitor native projeleri
 /android
 /ios
+dist-native
+.expo

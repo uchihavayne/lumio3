@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",
+    "build:native": "tsc && vite build --mode native",
+    "native:sync": "npm run build:native && node scripts/sync-native.mjs",
     "preview": "vite preview --host",
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npm run build && npx cap sync android && npx cap open android",
@@ -14,6 +16,7 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }
