@@ -91,6 +91,8 @@ export class Game {
     document.addEventListener("visibilitychange", () =>
       this.sound.setActive(!document.hidden)
     );
+    // Ekran boyutu/yönü değişince tahtayı yeniden sığdır.
+    window.addEventListener("resize", () => this.layoutBoard());
     this.buildShell();
 
     if (this.save.lang) {
@@ -726,11 +728,32 @@ export class Game {
       this.cellEls.set(`${cell.row},${cell.col}`, el);
     }
 
-    const maxDim = Math.max(cw.cols, cw.rows);
-    this.elBoard.style.setProperty(
-      "--cell-max",
-      maxDim >= 8 ? "40px" : maxDim >= 6 ? "46px" : "54px"
+    this.layoutBoard();
+  }
+
+  /**
+   * Hücre boyutu: tahtayı hem GENİŞLİĞE hem YÜKSEKLİĞE sığdırır.
+   * (Eskiden yalnızca sütun sayısına bakılıyordu; uzun bulmacalar aşağı
+   * taşıp kelime rozetlerinin/butonların üstüne biniyordu.)
+   */
+  private layoutBoard() {
+    if (!this.crossword) return;
+    const cw = this.crossword;
+    const wrap = this.elBoard.parentElement;
+    if (!wrap) return;
+    const availW = Math.min(wrap.clientWidth * 0.94, 440);
+    const availH = Math.max(wrap.clientHeight - 12, 80);
+    const gap = Math.round(Math.min(Math.max(availW * 0.014, 3), 6));
+    const size = Math.floor(
+      Math.min(
+        (availW - gap * (cw.cols - 1)) / cw.cols,
+        (availH - gap * (cw.rows - 1)) / cw.rows
+      )
     );
+    const cell = Math.max(20, Math.min(size, 54));
+    this.elBoard.style.setProperty("--cell-max", `${cell}px`);
+    this.elBoard.style.gap = `${gap}px`;
+    this.elBoard.style.width = `${cw.cols * cell + gap * (cw.cols - 1)}px`;
   }
 
   private renderFound() {
