@@ -76,8 +76,19 @@ function poolKey(word: string): string {
 interface Catalog {
   seq: string[]; // her oge bir havuz (harf dizisi)
   wordsForPool: Map<string, string[]>; // poolKey -> kelimeler
+  /** Seviye sirasina gore SECILEN kelimeler (tekrar penceresi uygulanmis). */
+  chosen: string[][];
 }
 const catalogCache = new Map<string, Catalog>();
+
+/** Iki havuzun harf kumesi ortusme orani (0..1). */
+function overlapRatio(a: string, b: string): number {
+  const sa = new Set(a);
+  const sb = new Set(b);
+  let n = 0;
+  for (const ch of sa) if (sb.has(ch)) n++;
+  return n / Math.min(sa.size, sb.size);
+}
 
 function getCatalog(lang: Lang, salt: number): Catalog {
   const ckey = `${lang}:${salt}`;
@@ -119,8 +130,10 @@ function getCatalog(lang: Lang, salt: number): Catalog {
   // 1) Temiz aileler: banka kelimelerinin kendi havuzlari (carkta tam kelime).
   for (const w of words) consider(w, false);
   // 2) Kombinasyon havuzlari (+1 harf) -> sonsuz, cesitli kuyruk.
+  // 3 harfli kelimeler de dahil: 4 harfli havuz arzini genisletir, yoksa
+  // erken seviyeler hep ayni dar aileden (ayni harflerden) gelir.
   for (const w of words) {
-    if (w.length < 4 || w.length > 6) continue;
+    if (w.length < 3 || w.length > 6) continue;
     for (const c of alphabet) consider(w + c, true);
   }
 
@@ -157,19 +170,78 @@ function getCatalog(lang: Lang, salt: number): Catalog {
     return null;
   };
 
+  // Diziyi ve her seviyenin kelime secimini BIRLIKTE, sirali kur:
+  // siradaki havuz adaylari son 5 seviyenin KELIMELERIYLE ve son 2 havuzun
+  // HARFLERIYLE karsilastirilir; en az cakisan aday one alinir. Boylece
+  // "ayni kelimeler / ayni harfler ust uste geliyor" hissi kirilir.
+  const LOOKAHEAD = 25;
+  const RECENT_WINDOW = 5;
   const seq: string[] = [];
+  const chosen: string[][] = [];
+
+  const subsOf = (pool: string) => wordsForPool.get(poolKey(pool)) ?? [pool];
+
+  const pickWords = (pool: string, recent: Set<string>): string[] => {
+    const all = [...new Set(subsOf(pool))].sort((a, b) => b.length - a.length);
+    const picked: string[] = [];
+    if (all.length) picked.push(all[0]); // en uzun kelime her zaman capa
+    for (const w of all) {
+      if (picked.length >= 12) break;
+      if (!recent.has(w) && !picked.includes(w)) picked.push(w);
+    }
+    // Taze kelime yetmediyse tekrarlara izin vererek en az 4'e tamamla.
+    for (const w of all) {
+      if (picked.length >= Math.min(4, all.length)) break;
+      if (!picked.includes(w)) picked.push(w);
+    }
+    return picked.sort((a, b) => b.length - a.length);
+  };
+
   let p = 0;
   while (seq.length < total) {
     const L = nearest(schedLen(p++));
     if (L === null) break;
+    const listL = getList(L);
     const o = ptr.get(L) ?? 0;
-    seq.push(getList(L)[o]);
+    const prev1 = seq[seq.length - 1];
+    const prev2 = seq[seq.length - 2];
+    const recent = new Set<string>();
+    for (let d = 1; d <= RECENT_WINDOW; d++) {
+      const prevWords = chosen[chosen.length - d];
+      if (prevWords) for (const w of prevWords) recent.add(w);
+    }
+
+    let pick = -1;
+    let fallback = o;
+    let fallbackScore = Infinity;
+    for (let k = o; k < Math.min(o + LOOKAHEAD, listL.length); k++) {
+      const cand = listL[k];
+      let rep = 0;
+      for (const w of subsOf(cand)) if (recent.has(w)) rep++;
+      const l1 = prev1 ? overlapRatio(cand, prev1) : 0;
+      const l2 = prev2 ? overlapRatio(cand, prev2) : 0;
+      if (rep <= 1 && l1 < 0.5 && l2 < 0.7) {
+        pick = k;
+        break;
+      }
+      const score = rep * 2 + l1 * 3 + l2 * 1.5;
+      if (score < fallbackScore) {
+        fallbackScore = score;
+        fallback = k;
+      }
+    }
+    if (pick === -1) pick = fallback;
+    [listL[o], listL[pick]] = [listL[pick], listL[o]];
+    const pool = listL[o];
+    seq.push(pool);
+    chosen.push(pickWords(pool, recent));
     ptr.set(L, o + 1);
   }
 
   const out: Catalog = {
     seq: seq.length ? seq : [words.find((w) => w.length >= 4) ?? "ABCD"],
     wordsForPool,
+    chosen: chosen.length ? chosen : [[words.find((w) => w.length >= 4) ?? "ABCD"]],
   };
   catalogCache.set(ckey, out);
   return out;
@@ -178,13 +250,9 @@ function getCatalog(lang: Lang, salt: number): Catalog {
 /** Tek bir prosedurel seviye. Deterministik: ayni (lang,index,salt) -> ayni seviye. */
 export function makeLevel(lang: Lang, index: number, salt: number): GenLevel {
   const cat = getCatalog(lang, salt);
-  const pool = cat.seq[index % cat.seq.length];
-  const pk = poolKey(pool);
-
-  let list = [...new Set(cat.wordsForPool.get(pk) ?? [pool])].sort(
-    (a, b) => b.length - a.length
-  );
-  if (list.length > 12) list = list.slice(0, 12);
+  const p = index % cat.seq.length;
+  const pool = cat.seq[p];
+  const list = cat.chosen[p];
 
   const erng = mulberry32(hashStr(pool) + index);
   const emoji = SAFE_EMOJIS[Math.floor(erng() * SAFE_EMOJIS.length)];

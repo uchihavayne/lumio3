@@ -69,7 +69,7 @@ function buildCatalog(lang, salt) {
     wordsForPool.set(pk, subs);
   };
   for (const w of words) consider(w, false);
-  for (const w of words) if (w.length >= 4 && w.length <= 6) for (const c of alphabet) consider(w + c, true);
+  for (const w of words) if (w.length >= 3 && w.length <= 6) for (const c of alphabet) consider(w + c, true);
   const shuffle = (arr, seed) => { const rng = mulberry32(seed); for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } };
   const h = (hashStr(lang) ^ (salt >>> 0)) >>> 0;
   for (const [L, arr] of groupsBase) shuffle(arr, h + L * 2654435761);
@@ -80,14 +80,48 @@ function buildCatalog(lang, salt) {
   const total = [4, 5, 6, 7].reduce((s, L) => s + getList(L).length, 0);
   const remaining = (L) => getList(L).length - (ptr.get(L) || 0);
   const nearest = (L) => { for (let d = 0; d <= 5; d++) { if (remaining(L - d) > 0) return L - d; if (remaining(L + d) > 0) return L + d; } return null; };
-  const seq = []; let p = 0;
-  while (seq.length < total) { const L = nearest(schedLen(p++)); if (L === null) break; const o = ptr.get(L) || 0; seq.push(getList(L)[o]); ptr.set(L, o + 1); }
-  return { seq: seq.length ? seq : [words[0]], wordsForPool };
+  const overlapRatio = (a, b) => { const sa = new Set(a), sb = new Set(b); let n = 0; for (const ch of sa) if (sb.has(ch)) n++; return n / Math.min(sa.size, sb.size); };
+  const LOOKAHEAD = 25;
+  const RECENT_WINDOW = 5;
+  const seq = []; const chosen = [];
+  const subsOf = (pool) => wordsForPool.get(poolKey(pool)) || [pool];
+  const pickWords = (pool, recent) => {
+    const all = [...new Set(subsOf(pool))].sort((a, b) => b.length - a.length);
+    const picked = [];
+    if (all.length) picked.push(all[0]);
+    for (const w of all) { if (picked.length >= 12) break; if (!recent.has(w) && !picked.includes(w)) picked.push(w); }
+    for (const w of all) { if (picked.length >= Math.min(4, all.length)) break; if (!picked.includes(w)) picked.push(w); }
+    return picked.sort((a, b) => b.length - a.length);
+  };
+  let p = 0;
+  while (seq.length < total) {
+    const L = nearest(schedLen(p++)); if (L === null) break;
+    const listL = getList(L); const o = ptr.get(L) || 0;
+    const prev1 = seq[seq.length - 1], prev2 = seq[seq.length - 2];
+    const recent = new Set();
+    for (let d = 1; d <= RECENT_WINDOW; d++) { const prevWords = chosen[chosen.length - d]; if (prevWords) for (const w of prevWords) recent.add(w); }
+    let pick = -1, fallback = o, fallbackScore = Infinity;
+    for (let k = o; k < Math.min(o + LOOKAHEAD, listL.length); k++) {
+      const cand = listL[k];
+      let rep = 0; for (const w of subsOf(cand)) if (recent.has(w)) rep++;
+      const l1 = prev1 ? overlapRatio(cand, prev1) : 0;
+      const l2 = prev2 ? overlapRatio(cand, prev2) : 0;
+      if (rep <= 1 && l1 < 0.5 && l2 < 0.7) { pick = k; break; }
+      const score = rep * 2 + l1 * 3 + l2 * 1.5;
+      if (score < fallbackScore) { fallbackScore = score; fallback = k; }
+    }
+    if (pick === -1) pick = fallback;
+    [listL[o], listL[pick]] = [listL[pick], listL[o]];
+    const pool = listL[o];
+    seq.push(pool);
+    chosen.push(pickWords(pool, recent));
+    ptr.set(L, o + 1);
+  }
+  return { seq: seq.length ? seq : [words[0]], wordsForPool, chosen: chosen.length ? chosen : [[words[0]]] };
 }
 function makeLevel(lang, index, salt, cat) {
-  const pool = cat.seq[index % cat.seq.length];
-  const list = [...new Set(cat.wordsForPool.get(poolKey(pool)) || [pool])].sort((a, b) => b.length - a.length).slice(0, 12);
-  return { letters: [...pool], words: list };
+  const p = index % cat.seq.length;
+  return { letters: [...cat.seq[p]], words: cat.chosen[p] };
 }
 
 // --- rapor ---
@@ -114,8 +148,29 @@ for (const lang of Object.keys(BANK)) {
   const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
     .map(([w, n]) => `${w}=%${Math.round((100 * n) / L40)}`);
 
+  // TEKRAR METRIKLERI: ardisik seviyeler arasi kelime ve harf ortusmesi.
+  const M = Math.min(200, cat.seq.length);
+  let wordOverlapSum = 0, letterOverlapSum = 0, backToBack = 0;
+  let prevWords = null, prevPool = null;
+  for (let i = 0; i < M; i++) {
+    const lv = makeLevel(lang, i, SALT, cat);
+    const ws = new Set(lv.words);
+    const pl = new Set(lv.letters);
+    if (prevWords) {
+      let inter = 0; for (const w of ws) if (prevWords.has(w)) inter++;
+      wordOverlapSum += inter / ws.size;
+      if (inter > 0) backToBack++;
+      let li = 0; for (const ch of pl) if (prevPool.has(ch)) li++;
+      letterOverlapSum += li / Math.min(pl.size, prevPool.size);
+    }
+    prevWords = ws; prevPool = pl;
+  }
+  const avgWordRep = Math.round((100 * wordOverlapSum) / (M - 1));
+  const avgLetterRep = Math.round((100 * letterOverlapSum) / (M - 1));
+
   const sample = []; for (let i = 0; i < 14; i++) { const lv = makeLevel(lang, i, SALT, cat); sample.push(`${lv.letters.join("")}(${lv.words.length})`); }
   console.log(`${lang}: dict=${BANK[lang].length} | benzersizSeviye=${seenK.size} | tekrarBaslangici=${loopAt ?? ">" + N} | yakinTekrar(8)=${nearRep}`);
+  console.log(`    ardisikKelimeTekrari=%${avgWordRep} (ardisikTekrarliSeviye=${backToBack}/${M - 1}) | ardisikHarfOrtusmesi=%${avgLetterRep}`);
   console.log("    örnek:", sample.slice(0, 10).join(" "));
   console.log("    enSık:", top.join(" "));
 }
