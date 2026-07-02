@@ -700,7 +700,7 @@ export class Game {
     this.elLevelName.textContent = this.daily
       ? `🗓️ ${t("dailyPuzzle")}`
       : `${world} ${t("levelWord")} ${this.levelIndex + 1}`;
-    this.wheel.setLetters(this.gen.letters);
+    this.wheel.setLetters(this.gen.letters, this.gen.words);
     this.wheel.shuffle();
     this.renderBoard();
     this.renderFound();

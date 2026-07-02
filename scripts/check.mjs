@@ -24,7 +24,12 @@ function extractBlock(name) {
 const BANK = {};
 for (const L of LANGS)
   BANK[L.toLowerCase()] = [
-    ...new Set([...extractBlock(L), ...extractBlock(L + "2"), ...extractBlock(L + "3")]),
+    ...new Set([
+      ...extractBlock(L),
+      ...extractBlock(L + "2"),
+      ...extractBlock(L + "3"),
+      ...extractBlock(L + "4"),
+    ]),
   ];
 
 // --- generator.ts mantigi (birebir) ---

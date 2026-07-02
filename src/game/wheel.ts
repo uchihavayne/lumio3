@@ -75,17 +75,40 @@ export class Wheel {
     window.addEventListener("pointercancel", this.onUp);
   }
 
-  setLetters(letters: string[]) {
+  private forbidden: string[] = [];
+
+  /**
+   * forbidden: bulmacadaki kelimeler — cark dizilisi bunlardan carkin tamamini
+   * kaplayanlari (ana kelime) cember uzerinde OKUNUR birakmamali; yoksa cevap
+   * bakar bakmaz gorunur (or. G-Ö-M-L-E-K sirali dizilirse).
+   */
+  setLetters(letters: string[], forbidden: string[] = []) {
     this.letters = [...letters];
+    this.forbidden = forbidden.filter((w) => w.length === letters.length);
     this.render();
   }
 
   shuffle() {
-    for (let i = this.letters.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this.letters[i], this.letters[j]] = [this.letters[j], this.letters[i]];
+    // Yasakli kelimeyi (saat yonu veya tersi, herhangi bir baslangictan)
+    // heceleyen dizilisleri reddet; guvenli dizilis bulunana dek karistir.
+    for (let tries = 0; tries < 40; tries++) {
+      for (let i = this.letters.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.letters[i], this.letters[j]] = [this.letters[j], this.letters[i]];
+      }
+      if (!this.spellsForbidden()) break;
     }
     this.render();
+  }
+
+  private spellsForbidden(): boolean {
+    const n = this.letters.length;
+    if (!this.forbidden.length || n < 3) return false;
+    const ring = this.letters.join("");
+    const cw = ring + ring; // dairesel okuma icin ikiye katla
+    const rev = [...this.letters].reverse().join("");
+    const ccw = rev + rev;
+    return this.forbidden.some((w) => cw.includes(w) || ccw.includes(w));
   }
 
   private render() {
