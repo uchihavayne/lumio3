@@ -1228,6 +1228,31 @@ body.high-contrast .tb-bar-fill { background: linear-gradient(90deg, #4cc9ff, #9
   50% { box-shadow: 0 0 24px rgba(255, 207, 107, 0.6); }
 }
 
+/* İsim düzenleme paneli */
+.name-panel { max-width: 340px; }
+.name-input {
+  width: 100%;
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 207, 107, 0.5);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: auto;
+}
+.name-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(255, 207, 107, 0.2);
+}
+
 /* Büyük yazı (erişilebilirlik) */
 body.big-text .cell { font-size: clamp(18px, 6vw, 30px); }
 body.big-text .wheel-tile { font-size: clamp(26px, 8vw, 37px); }

@@ -23,7 +23,9 @@ function extractBlock(name) {
 }
 const BANK = {};
 for (const L of LANGS)
-  BANK[L.toLowerCase()] = [...new Set([...extractBlock(L), ...extractBlock(L + "2")])];
+  BANK[L.toLowerCase()] = [
+    ...new Set([...extractBlock(L), ...extractBlock(L + "2"), ...extractBlock(L + "3")]),
+  ];
 
 // --- generator.ts mantigi (birebir) ---
 const LEN_SCHEDULE = [4, 4, 4, 5, 4, 5, 5, 6, 5, 6, 6, 7, 6, 7, 6, 7, 7, 6, 7, 7];

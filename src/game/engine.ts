@@ -31,6 +31,13 @@ function dayStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Kullanici girdisini HTML'e gomerken kacislar (isim vb.). */
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!
+  );
+}
+
 export class Game {
   private root: HTMLElement;
   private fx: FireflyLayer;
@@ -367,7 +374,7 @@ export class Game {
           <h1 class="brand">Lum<span>io</span></h1>
           <p class="tagline">${t("tagline")}</p>
         </div>
-        <button class="name-chip" id="btn-name">👤 ${this.playerName()}</button>
+        <button class="name-chip" id="btn-name">👤 ${esc(this.playerName())}</button>
         <button class="btn primary continue-btn" id="btn-continue">
           ▶ ${t("playBtn")} · ${t("levelWord")} ${next + 1}
         </button>
@@ -432,13 +439,45 @@ export class Game {
     });
   }
 
+  /**
+   * Isim duzenleme: oyun ici panel (window.prompt iOS WKWebView'de calismaz,
+   * magaza derlemesinde isim degistirme kirilirdi).
+   */
   private editName(after: () => void) {
-    const name = window.prompt(t("changeNameLabel"), this.playerName());
-    if (name && name.trim()) {
-      this.save.name = name.trim().slice(0, 16);
-      persist(this.save);
-    }
-    after();
+    const ov = this.q("#overlay");
+    ov.innerHTML = `
+      <div class="panel name-panel">
+        <div class="ad-emoji">👤</div>
+        <h2>${t("changeNameLabel")}</h2>
+        <input class="name-input" id="name-input" maxlength="16"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          value="${esc(this.playerName())}" />
+        <div class="win-actions">
+          <button class="btn primary" id="name-save">${t("saveBtn")}</button>
+          <button class="btn ghost" id="name-cancel">${t("cancel")}</button>
+        </div>
+      </div>`;
+    ov.classList.remove("hidden");
+    const input = this.q<HTMLInputElement>("#name-input");
+    input.focus();
+    input.select();
+    const done = () => {
+      const name = input.value.trim().slice(0, 16);
+      if (name) {
+        this.save.name = name;
+        persist(this.save);
+      }
+      this.sound.play("click");
+      after();
+    };
+    this.q("#name-save").addEventListener("click", done);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") done();
+    });
+    this.q("#name-cancel").addEventListener("click", () => {
+      this.sound.play("click");
+      after();
+    });
   }
 
   // ---------- Ayarlar ----------
@@ -460,7 +499,7 @@ export class Game {
         <button class="set-row" id="s-contrast"><span>◐ ${t("highContrastLabel")}</span><b id="s-contrast-val">${this.save.highContrast ? "✓" : "✕"}</b></button>
         <button class="set-row" id="s-automean"><span>💬 ${t("autoMeaningLabel")}</span><b id="s-automean-val">${this.save.autoMeaning ? "✓" : "✕"}</b></button>
         <button class="set-row" id="s-lang"><span>🌐 ${t("languageLabel")}</span><b>${lm.flag} ${lm.name}</b></button>
-        <button class="set-row" id="s-name"><span>👤 ${t("changeNameLabel")}</span><b>${this.playerName()}</b></button>
+        <button class="set-row" id="s-name"><span>👤 ${t("changeNameLabel")}</span><b>${esc(this.playerName())}</b></button>
         <button class="set-row" id="s-howto"><span>❓ ${t("tutorialTitle")}</span><b>›</b></button>
         <button class="set-row danger" id="s-reset"><span>🗑️ ${t("resetProgress")}</span><b>›</b></button>
         <p class="about">${t("aboutLine")} · v1.0</p>
@@ -1122,7 +1161,7 @@ export class Game {
         const medal = e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : e.rank === 3 ? "🥉" : `${e.rank}`;
         return `<div class="lb-row ${e.isPlayer ? "me" : ""}">
           <span class="lb-rank">${medal}</span>
-          <span class="lb-name">${e.name}</span>
+          <span class="lb-name">${esc(e.name)}</span>
           <span class="lb-score">${e.score}</span>
         </div>`;
       })
