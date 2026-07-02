@@ -170,72 +170,122 @@ function getCatalog(lang: Lang, salt: number): Catalog {
     return null;
   };
 
-  // Diziyi ve her seviyenin kelime secimini BIRLIKTE, sirali kur:
-  // siradaki havuz adaylari son 5 seviyenin KELIMELERIYLE ve son 2 havuzun
-  // HARFLERIYLE karsilastirilir; en az cakisan aday one alinir. Boylece
-  // "ayni kelimeler / ayni harfler ust uste geliyor" hissi kirilir.
+  // TEKRARSIZLIK KURALI: bir kelime bir seviyede kullanildiysa sonraki
+  // seviyelerde BIR DAHA CIKMAZ (kuresel "used" kumesi). Sozluk tukenip
+  // pencerede hic uygun havuz kalmazsa kume sifirlanir (yeni dongu) — bu
+  // pratikte yuzlerce seviye sonra olur. Ek olarak ardisik havuzlarin harf
+  // kumeleri de ayristirilir (l1<0.5, l2<0.7).
   const LOOKAHEAD = 25;
-  const RECENT_WINDOW = 5;
   const seq: string[] = [];
   const chosen: string[][] = [];
+  const used = new Set<string>();
 
   const subsOf = (pool: string) => wordsForPool.get(poolKey(pool)) ?? [pool];
 
-  const pickWords = (pool: string, recent: Set<string>): string[] => {
-    const all = [...new Set(subsOf(pool))].sort((a, b) => b.length - a.length);
-    const picked: string[] = [];
-    if (all.length) picked.push(all[0]); // en uzun kelime her zaman capa
-    for (const w of all) {
-      if (picked.length >= 12) break;
-      if (!recent.has(w) && !picked.includes(w)) picked.push(w);
+  /**
+   * Havuzun TAZE (hic kullanilmamis) kelime listesi. Kosullar saglanmazsa
+   * null -> havuz bu turda atlanir:
+   *  - en az MIN_SUBWORDS taze kelime
+   *  - carktaki HER harf en az bir taze kelimede gecmeli (bosta harf olmasin)
+   */
+  // Seviye basina en fazla bu kadar kelime tuketilir (arz daha uzun dayanir).
+  const WORDS_PER_LEVEL = 9;
+
+  const freshList = (pool: string): string[] | null => {
+    const all = [...new Set(subsOf(pool))]
+      .filter((w) => !used.has(w))
+      .sort((a, b) => b.length - a.length);
+    if (all.length < MIN_SUBWORDS) return null;
+    const covered = new Set<string>();
+    for (const w of all) for (const ch of w) covered.add(ch);
+    for (const ch of new Set(pool)) if (!covered.has(ch)) return null;
+    return all.slice(0, WORDS_PER_LEVEL);
+  };
+
+  // Hedef uzunluktan baslayarak yakin uzunluklari sirala (kalani olanlar).
+  const lengthOrder = (L0: number): number[] => {
+    const out: number[] = [];
+    for (let d = 0; d <= 5; d++) {
+      if (remaining(L0 - d) > 0) out.push(L0 - d);
+      if (d > 0 && remaining(L0 + d) > 0) out.push(L0 + d);
     }
-    // Taze kelime yetmediyse tekrarlara izin vererek en az 4'e tamamla.
-    for (const w of all) {
-      if (picked.length >= Math.min(4, all.length)) break;
-      if (!picked.includes(w)) picked.push(w);
+    return out;
+  };
+
+  // Yakin pencerede harf cesitliligi de gozetilir; pencere taze havuz
+  // vermezse liste SONUNA KADAR taranir (tazelik > harf cesitliligi).
+  const scan = (
+    listL: string[],
+    o: number,
+    prev1: string | undefined,
+    prev2: string | undefined
+  ): { pick: number; list: string[] } | null => {
+    let fb = -1;
+    let fbScore = Infinity;
+    let fbList: string[] | null = null;
+    for (let k = o; k < listL.length; k++) {
+      const cand = listL[k];
+      const list = freshList(cand);
+      if (!list) continue;
+      if (k >= o + LOOKAHEAD) {
+        return fb !== -1 ? { pick: fb, list: fbList! } : { pick: k, list };
+      }
+      const l1 = prev1 ? overlapRatio(cand, prev1) : 0;
+      const l2 = prev2 ? overlapRatio(cand, prev2) : 0;
+      if (l1 < 0.5 && l2 < 0.7) return { pick: k, list };
+      const score = l1 * 3 + l2 * 1.5;
+      if (score < fbScore) {
+        fbScore = score;
+        fb = k;
+        fbList = list;
+      }
     }
-    return picked.sort((a, b) => b.length - a.length);
+    return fb !== -1 ? { pick: fb, list: fbList! } : null;
   };
 
   let p = 0;
   while (seq.length < total) {
-    const L = nearest(schedLen(p++));
-    if (L === null) break;
-    const listL = getList(L);
-    const o = ptr.get(L) ?? 0;
+    const L0 = schedLen(p++);
+    if (nearest(L0) === null) break;
     const prev1 = seq[seq.length - 1];
     const prev2 = seq[seq.length - 2];
-    const recent = new Set<string>();
-    for (let d = 1; d <= RECENT_WINDOW; d++) {
-      const prevWords = chosen[chosen.length - d];
-      if (prevWords) for (const w of prevWords) recent.add(w);
-    }
 
-    let pick = -1;
-    let fallback = o;
-    let fallbackScore = Infinity;
-    for (let k = o; k < Math.min(o + LOOKAHEAD, listL.length); k++) {
-      const cand = listL[k];
-      let rep = 0;
-      for (const w of subsOf(cand)) if (recent.has(w)) rep++;
-      const l1 = prev1 ? overlapRatio(cand, prev1) : 0;
-      const l2 = prev2 ? overlapRatio(cand, prev2) : 0;
-      if (rep <= 1 && l1 < 0.5 && l2 < 0.7) {
-        pick = k;
-        break;
+    // Hedef uzunlukta taze havuz yoksa DIGER uzunluklara gec; hicbirinde
+    // yoksa sozluk gercekten tukenmistir -> yeni dongu.
+    const tryAll = (): { L: number; res: { pick: number; list: string[] } } | null => {
+      for (const L of lengthOrder(L0)) {
+        const res = scan(getList(L), ptr.get(L) ?? 0, prev1, prev2);
+        if (res) return { L, res };
       }
-      const score = rep * 2 + l1 * 3 + l2 * 1.5;
-      if (score < fallbackScore) {
-        fallbackScore = score;
-        fallback = k;
-      }
+      return null;
+    };
+
+    let hit = tryAll();
+    if (!hit) {
+      used.clear(); // tum sozluk tuketildi -> yeni dongu
+      hit = tryAll();
     }
-    if (pick === -1) pick = fallback;
-    [listL[o], listL[pick]] = [listL[pick], listL[o]];
-    const pool = listL[o];
-    seq.push(pool);
-    chosen.push(pickWords(pool, recent));
-    ptr.set(L, o + 1);
+    if (!hit) {
+      const L = nearest(L0)!;
+      const listL = getList(L);
+      const o = ptr.get(L) ?? 0;
+      hit = {
+        L,
+        res: {
+          pick: o,
+          list: [...new Set(subsOf(listL[o]))]
+            .sort((a, b) => b.length - a.length)
+            .slice(0, WORDS_PER_LEVEL),
+        },
+      };
+    }
+    const listL = getList(hit.L);
+    const o = ptr.get(hit.L) ?? 0;
+    [listL[o], listL[hit.res.pick]] = [listL[hit.res.pick], listL[o]];
+    seq.push(listL[o]);
+    chosen.push(hit.res.list);
+    for (const w of hit.res.list) used.add(w);
+    ptr.set(hit.L, o + 1);
   }
 
   const out: Catalog = {

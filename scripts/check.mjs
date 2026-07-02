@@ -82,40 +82,68 @@ function buildCatalog(lang, salt) {
   const nearest = (L) => { for (let d = 0; d <= 5; d++) { if (remaining(L - d) > 0) return L - d; if (remaining(L + d) > 0) return L + d; } return null; };
   const overlapRatio = (a, b) => { const sa = new Set(a), sb = new Set(b); let n = 0; for (const ch of sa) if (sb.has(ch)) n++; return n / Math.min(sa.size, sb.size); };
   const LOOKAHEAD = 25;
-  const RECENT_WINDOW = 5;
-  const seq = []; const chosen = [];
+  const seq = []; const chosen = []; const used = new Set();
   const subsOf = (pool) => wordsForPool.get(poolKey(pool)) || [pool];
-  const pickWords = (pool, recent) => {
-    const all = [...new Set(subsOf(pool))].sort((a, b) => b.length - a.length);
-    const picked = [];
-    if (all.length) picked.push(all[0]);
-    for (const w of all) { if (picked.length >= 12) break; if (!recent.has(w) && !picked.includes(w)) picked.push(w); }
-    for (const w of all) { if (picked.length >= Math.min(4, all.length)) break; if (!picked.includes(w)) picked.push(w); }
-    return picked.sort((a, b) => b.length - a.length);
+  const WORDS_PER_LEVEL = 9;
+  const freshList = (pool) => {
+    const all = [...new Set(subsOf(pool))].filter((w) => !used.has(w)).sort((a, b) => b.length - a.length);
+    if (all.length < MIN_SUBWORDS) return null;
+    const covered = new Set();
+    for (const w of all) for (const ch of w) covered.add(ch);
+    for (const ch of new Set(pool)) if (!covered.has(ch)) return null;
+    return all.slice(0, WORDS_PER_LEVEL);
+  };
+  const lengthOrder = (L0) => {
+    const out = [];
+    for (let d = 0; d <= 5; d++) {
+      if (remaining(L0 - d) > 0) out.push(L0 - d);
+      if (d > 0 && remaining(L0 + d) > 0) out.push(L0 + d);
+    }
+    return out;
+  };
+  const scan = (listL, o, prev1, prev2) => {
+    let fb = -1, fbScore = Infinity, fbList = null;
+    for (let k = o; k < listL.length; k++) {
+      const cand = listL[k];
+      const list = freshList(cand);
+      if (!list) continue;
+      if (k >= o + LOOKAHEAD) {
+        return fb !== -1 ? { pick: fb, list: fbList } : { pick: k, list };
+      }
+      const l1 = prev1 ? overlapRatio(cand, prev1) : 0;
+      const l2 = prev2 ? overlapRatio(cand, prev2) : 0;
+      if (l1 < 0.5 && l2 < 0.7) return { pick: k, list };
+      const score = l1 * 3 + l2 * 1.5;
+      if (score < fbScore) { fbScore = score; fb = k; fbList = list; }
+    }
+    return fb !== -1 ? { pick: fb, list: fbList } : null;
   };
   let p = 0;
   while (seq.length < total) {
-    const L = nearest(schedLen(p++)); if (L === null) break;
-    const listL = getList(L); const o = ptr.get(L) || 0;
+    const L0 = schedLen(p++);
+    if (nearest(L0) === null) break;
     const prev1 = seq[seq.length - 1], prev2 = seq[seq.length - 2];
-    const recent = new Set();
-    for (let d = 1; d <= RECENT_WINDOW; d++) { const prevWords = chosen[chosen.length - d]; if (prevWords) for (const w of prevWords) recent.add(w); }
-    let pick = -1, fallback = o, fallbackScore = Infinity;
-    for (let k = o; k < Math.min(o + LOOKAHEAD, listL.length); k++) {
-      const cand = listL[k];
-      let rep = 0; for (const w of subsOf(cand)) if (recent.has(w)) rep++;
-      const l1 = prev1 ? overlapRatio(cand, prev1) : 0;
-      const l2 = prev2 ? overlapRatio(cand, prev2) : 0;
-      if (rep <= 1 && l1 < 0.5 && l2 < 0.7) { pick = k; break; }
-      const score = rep * 2 + l1 * 3 + l2 * 1.5;
-      if (score < fallbackScore) { fallbackScore = score; fallback = k; }
+    const tryAll = () => {
+      for (const L of lengthOrder(L0)) {
+        const res = scan(getList(L), ptr.get(L) || 0, prev1, prev2);
+        if (res) return { L, res };
+      }
+      return null;
+    };
+    let hit = tryAll();
+    if (!hit) { used.clear(); hit = tryAll(); }
+    if (!hit) {
+      const L = nearest(L0);
+      const listL = getList(L); const o = ptr.get(L) || 0;
+      hit = { L, res: { pick: o, list: [...new Set(subsOf(listL[o]))].sort((a, b) => b.length - a.length).slice(0, WORDS_PER_LEVEL) } };
     }
-    if (pick === -1) pick = fallback;
-    [listL[o], listL[pick]] = [listL[pick], listL[o]];
-    const pool = listL[o];
-    seq.push(pool);
-    chosen.push(pickWords(pool, recent));
-    ptr.set(L, o + 1);
+    const listL = getList(hit.L);
+    const o = ptr.get(hit.L) || 0;
+    [listL[o], listL[hit.res.pick]] = [listL[hit.res.pick], listL[o]];
+    seq.push(listL[o]);
+    chosen.push(hit.res.list);
+    for (const w of hit.res.list) used.add(w);
+    ptr.set(hit.L, o + 1);
   }
   return { seq: seq.length ? seq : [words[0]], wordsForPool, chosen: chosen.length ? chosen : [[words[0]]] };
 }
@@ -148,10 +176,13 @@ for (const lang of Object.keys(BANK)) {
   const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
     .map(([w, n]) => `${w}=%${Math.round((100 * n) / L40)}`);
 
-  // TEKRAR METRIKLERI: ardisik seviyeler arasi kelime ve harf ortusmesi.
+  // TEKRAR METRIKLERI: ardisik seviyeler arasi kelime ve harf ortusmesi
+  // + KURESEL ilk tekrar (bir kelimenin herhangi bir onceki seviyede gecmesi).
   const M = Math.min(200, cat.seq.length);
   let wordOverlapSum = 0, letterOverlapSum = 0, backToBack = 0;
   let prevWords = null, prevPool = null;
+  const seenGlobal = new Set();
+  let firstGlobalRep = null;
   for (let i = 0; i < M; i++) {
     const lv = makeLevel(lang, i, SALT, cat);
     const ws = new Set(lv.words);
@@ -163,6 +194,10 @@ for (const lang of Object.keys(BANK)) {
       let li = 0; for (const ch of pl) if (prevPool.has(ch)) li++;
       letterOverlapSum += li / Math.min(pl.size, prevPool.size);
     }
+    if (firstGlobalRep === null) {
+      for (const w of ws) if (seenGlobal.has(w)) { firstGlobalRep = i + 1; break; }
+      for (const w of ws) seenGlobal.add(w);
+    }
     prevWords = ws; prevPool = pl;
   }
   const avgWordRep = Math.round((100 * wordOverlapSum) / (M - 1));
@@ -170,7 +205,7 @@ for (const lang of Object.keys(BANK)) {
 
   const sample = []; for (let i = 0; i < 14; i++) { const lv = makeLevel(lang, i, SALT, cat); sample.push(`${lv.letters.join("")}(${lv.words.length})`); }
   console.log(`${lang}: dict=${BANK[lang].length} | benzersizSeviye=${seenK.size} | tekrarBaslangici=${loopAt ?? ">" + N} | yakinTekrar(8)=${nearRep}`);
-  console.log(`    ardisikKelimeTekrari=%${avgWordRep} (ardisikTekrarliSeviye=${backToBack}/${M - 1}) | ardisikHarfOrtusmesi=%${avgLetterRep}`);
+  console.log(`    ardisikKelimeTekrari=%${avgWordRep} (ardisikTekrarliSeviye=${backToBack}/${M - 1}) | ardisikHarfOrtusmesi=%${avgLetterRep} | ilkKureselTekrar=${firstGlobalRep ?? "> " + M + ". seviye"}`);
   console.log("    örnek:", sample.slice(0, 10).join(" "));
   console.log("    enSık:", top.join(" "));
 }
