@@ -47,9 +47,44 @@ export async function initAds(): Promise<void> {
   }
 }
 
+// ---- React Native WebView köprüsü (Expo kabı) ----
+// Oyun WebView içinde koşarken reklamı native taraf (App.js) gösterir.
+// Oyun -> native: postMessage({type:"showRewarded"})
+// Native -> oyun: window.__lumioAdResult(true/false)
+
+interface RNBridge {
+  postMessage: (msg: string) => void;
+}
+
+function rnBridge(): RNBridge | null {
+  const w = window as unknown as { ReactNativeWebView?: RNBridge };
+  return typeof w.ReactNativeWebView?.postMessage === "function"
+    ? w.ReactNativeWebView
+    : null;
+}
+
+function showRewardedViaRN(bridge: RNBridge): Promise<boolean> {
+  return new Promise((resolve) => {
+    const w = window as unknown as { __lumioAdResult?: (ok: boolean) => void };
+    const timer = setTimeout(() => {
+      w.__lumioAdResult = undefined;
+      resolve(false);
+    }, 25000);
+    w.__lumioAdResult = (ok: boolean) => {
+      clearTimeout(timer);
+      w.__lumioAdResult = undefined;
+      resolve(!!ok);
+    };
+    bridge.postMessage(JSON.stringify({ type: "showRewarded" }));
+  });
+}
+
 /** Bir ödüllü reklam gösterir. Ödül alındıysa true, aksi halde false. */
 export async function showRewardedAd(): Promise<boolean> {
-  if (!ADS_ENABLED || !isNative()) return false;
+  if (!ADS_ENABLED) return false;
+  const bridge = rnBridge();
+  if (bridge) return showRewardedViaRN(bridge);
+  if (!isNative()) return false;
   try {
     const mod = await import(/* @vite-ignore */ PKG);
     const AdMob = mod.AdMob;

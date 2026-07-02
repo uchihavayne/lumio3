@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0b1026",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0b1026"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.lumio.game",
@@ -33,7 +28,29 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "userTrackingUsageDescription": "Bu izin, sana daha alakalı reklamlar göstermek için kullanılır."
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Bu izin, sana daha alakalı reklamlar göstermek için kullanılır."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#0b1026"
+        }
+      ]
     ],
     "extra": {
       "eas": {

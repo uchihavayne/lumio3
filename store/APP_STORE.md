@@ -53,15 +53,15 @@ Baskı yok, süre yok — sadece sen, harfler ve sakin bir ışıltı.
 - **Privacy Policy URL:** `store/privacy.html`'i bir yere yükle (GitHub Pages / Netlify /
   Vercel), URL'yi ver. (E-posta: 12hrsofficial@gmail.com — dolduruldu.)
 - **Support URL** ve **Marketing URL** (basit bir site/landing yeter).
-- **App Privacy (nutrition label):** GÜNCEL DURUM (Expo/WebView sürümü):
-  **reklam YOK, takip YOK** (AdMob bu kapta çalışmıyor) + **online lider tablosu AÇIK**.
-  İşaretle:
+- **App Privacy (nutrition label):** GÜNCEL DURUM: **reklam AÇIK**
+  (AdMob, RN köprüsüyle — ödüllü reklam) + **online lider tablosu AÇIK**. İşaretle:
+  - **Identifiers → Device ID**: reklam için — "Third-Party Advertising",
+    Tracking: **Yes** (ATT izni uygulama açılışında isteniyor).
   - **Identifiers → User ID**: rastgele oyuncu kimliği (lider tablosu) —
-    "App Functionality", Linked to you: **No**, Tracking: **No**.
-  - **User Content → Other**: oyuncunun seçtiği takma ad (lider tablosu) —
-    "App Functionality", Linked: No, Tracking: **No**.
-  - Başka hiçbir şey işaretleme. ATT izni İSTENMEZ ("tracking" hepsi No).
-- **Age rating:** Anket → hepsi "No" → **4+** (reklam kutusunu İŞARETLEME — reklam yok).
+    "App Functionality", Linked: No, Tracking: No.
+  - **Usage Data → Product Interaction**: reklam ölçümü — Third-Party Advertising.
+  - **User Content → Other**: oyuncunun seçtiği takma ad (lider tablosu).
+- **Age rating:** Anket → şiddet yok, **reklam VAR** kutusunu işaretle → genelde **4+**.
 - **Encryption:** `ITSAppUsesNonExemptEncryption = NO` (özel şifreleme yok).
 
 ## 5) Görsel varlıklar

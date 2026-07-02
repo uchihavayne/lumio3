@@ -1100,7 +1100,51 @@ export class Game {
     if (this.save.lastClaim === today) return false;
 
     const yesterday = dayStr(new Date(Date.now() - 86400000));
+    const twoDaysAgo = dayStr(new Date(Date.now() - 2 * 86400000));
+    const FREEZE_COST = 5;
+    // Seri dondurucu: tam 1 gün kaçırdıysa ve serisi değerliyse, ateşböceği
+    // karşılığı seriyi kurtarma teklifi.
+    if (
+      this.save.lastClaim === twoDaysAgo &&
+      this.save.streak >= 2 &&
+      this.save.fireflies >= FREEZE_COST
+    ) {
+      this.showStreakFreeze(FREEZE_COST);
+      return true;
+    }
     const newStreak = this.save.lastClaim === yesterday ? this.save.streak + 1 : 1;
+    this.showDailyRewardPanel(newStreak);
+    return true;
+  }
+
+  private showStreakFreeze(cost: number) {
+    const ov = this.q("#overlay");
+    ov.innerHTML = `
+      <div class="panel daily-panel">
+        <div class="daily-emoji">🧊</div>
+        <h2>${t("streakFreezeTitle")}</h2>
+        <p class="win-sub">${t("streakFreezeDesc", { n: cost, s: this.save.streak })}</p>
+        <div class="win-actions">
+          <button class="btn primary" id="fr-yes">${t("streakFreezeYes", { n: cost })}</button>
+          <button class="btn ghost" id="fr-no">${t("streakFreezeNo")}</button>
+        </div>
+      </div>`;
+    ov.classList.remove("hidden");
+    this.q("#fr-yes").addEventListener("click", () => {
+      this.save.fireflies -= cost;
+      persist(this.save);
+      this.updateJar();
+      this.sound.play("reward");
+      this.showDailyRewardPanel(this.save.streak + 1);
+    });
+    this.q("#fr-no").addEventListener("click", () => {
+      this.sound.play("click");
+      this.showDailyRewardPanel(1);
+    });
+  }
+
+  private showDailyRewardPanel(newStreak: number) {
+    const today = dayStr(new Date());
     const reward = Math.min(2 + newStreak, 8);
 
     const ov = this.q("#overlay");
@@ -1218,6 +1262,46 @@ export class Game {
     this.sound.play("win");
     this.checkAchievements();
 
+    // Bölüm sonu sandığı: her 10. seviye ilk kez bitirildiğinde sürpriz ödül.
+    if (wasNew && (this.levelIndex + 1) % 10 === 0) {
+      this.showChest(() => this.showWinPanel());
+      return;
+    }
+    this.showWinPanel();
+  }
+
+  private showChest(after: () => void) {
+    const CHEST_REWARD = 10;
+    const ov = this.q("#overlay");
+    ov.innerHTML = `
+      <div class="panel daily-panel">
+        <div class="daily-emoji">🎁</div>
+        <h2>${t("chestTitle")}</h2>
+        <p class="win-sub">${t("chestDesc", { n: Math.floor((this.levelIndex + 1) / 10) })}</p>
+        <div class="win-actions">
+          <button class="btn primary" id="chest-open">${t("chestOpen", { n: CHEST_REWARD })}</button>
+        </div>
+      </div>`;
+    ov.classList.remove("hidden");
+    this.q("#chest-open").addEventListener("click", () => {
+      this.save.fireflies += CHEST_REWARD;
+      persist(this.save);
+      this.updateJar();
+      this.sound.play("achievement");
+      this.fx.celebrate();
+      const jar = this.elJar.getBoundingClientRect();
+      this.fx.burst(
+        window.innerWidth / 2,
+        window.innerHeight / 2,
+        jar.left + jar.width / 2,
+        jar.top + jar.height / 2,
+        18
+      );
+      after();
+    });
+  }
+
+  private showWinPanel() {
     const ov = this.q("#overlay");
     ov.innerHTML = `
       <div class="panel win-panel">
@@ -1285,14 +1369,45 @@ export class Game {
       </div>`;
     ov.classList.remove("hidden");
     this.q("#btn-share").addEventListener("click", () =>
-      this.share(
-        `Lumio · ${t("dailyPuzzle")} 🗓️\n${this.found.size}/${this.crossword.placed.length} ✓`
-      )
+      this.share(this.dailyShareText())
     );
     this.q("#btn-menu").addEventListener("click", () => {
       this.sound.play("click");
       this.showHome();
     });
+  }
+
+  /**
+   * Günlük bulmaca emoji özeti (Wordle tarzı): bulmacanın şekli 🟩,
+   * ipucuyla açılan kelimelerin hücreleri 🟨, boşluklar ⬛.
+   */
+  private dailyShareText(): string {
+    const cw = this.crossword;
+    const hintedCells = new Set<string>();
+    for (const p of cw.placed) {
+      if ((this.hintedWords.get(p.word) ?? 0) > 0) {
+        const dr = p.dir === "V" ? 1 : 0;
+        const dc = p.dir === "H" ? 1 : 0;
+        for (let i = 0; i < p.word.length; i++)
+          hintedCells.add(`${p.row + dr * i},${p.col + dc * i}`);
+      }
+    }
+    const have = new Set(cw.cells.map((c) => `${c.row},${c.col}`));
+    let grid = "";
+    for (let r = 0; r < cw.rows; r++) {
+      for (let c = 0; c < cw.cols; c++) {
+        const k = `${r},${c}`;
+        grid += have.has(k) ? (hintedCells.has(k) ? "🟨" : "🟩") : "⬛";
+      }
+      grid += "\n";
+    }
+    const streak = this.save.streak > 0 ? ` · 🔥${this.save.streak}` : "";
+    return (
+      `Lumio 🏮 ${t("dailyPuzzle")} · ${dayStr(new Date())}\n` +
+      grid +
+      `${this.found.size}/${this.crossword.placed.length} ✓${streak}\n` +
+      `https://uchihavayne.github.io/lumio3/`
+    );
   }
 
   /** Sonuç paylaşımı: Web Share API, yoksa panoya kopyalar. */

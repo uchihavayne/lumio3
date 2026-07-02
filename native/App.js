@@ -1,28 +1,126 @@
 // Lumio native kabi: oyunun tek dosyalik HTML derlemesini (assets/game.html)
-// tam ekran WebView'de acar. Oyun tamamen cevrimdisi calisir; kayit
-// localStorage'da tutulur (WKWebView/Chromium kalici depolama).
-import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+// tam ekran WebView'de acar ve AdMob odullu reklam koprusunu saglar.
+//
+// Reklam akisi:
+//   oyun (WebView) --postMessage{type:"showRewarded"}--> buradaki onMessage
+//   -> AdMob odullu reklam gosterilir
+//   -> sonuc injectJavaScript ile window.__lumioAdResult(true/false) olarak doner
+//
+// ⚠️ YAYINDAN ONCE: asagidaki REWARDED_AD_ID'yi AdMob konsolundan aldigin
+// GERCEK odullu reklam birimi kimligiyle degistir (app.json'daki ios_app_id
+// ile birlikte). Su anki degerler Google'in resmi TEST kimlikleri.
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, View, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 import { Asset } from "expo-asset";
+import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
+import mobileAds, {
+  RewardedAd,
+  RewardedAdEventType,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
+
+const REWARDED_AD_ID = Platform.select({
+  ios: TestIds.REWARDED, // TEST — yayin oncesi: "ca-app-pub-XXXX/YYYY"
+  android: TestIds.REWARDED,
+});
 
 export default function App() {
   const [uri, setUri] = useState(null);
+  const webRef = useRef(null);
+  const adRef = useRef(null);
+  const adLoadedRef = useRef(false);
+
+  // Oyuna reklam sonucunu bildir.
+  const sendAdResult = (ok) => {
+    webRef.current?.injectJavaScript(
+      `window.__lumioAdResult && window.__lumioAdResult(${ok ? "true" : "false"}); true;`
+    );
+  };
+
+  // Bir sonraki odullu reklami hazirla.
+  const loadRewarded = () => {
+    try {
+      const ad = RewardedAd.createForAdRequest(REWARDED_AD_ID, {
+        requestNonPersonalizedAdsOnly: false,
+      });
+      adRef.current = ad;
+      adLoadedRef.current = false;
+      ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+        adLoadedRef.current = true;
+      });
+      ad.load();
+    } catch {
+      adRef.current = null;
+    }
+  };
 
   useEffect(() => {
     (async () => {
+      // Oyun HTML'ini yerel dosyaya cikar.
       const asset = Asset.fromModule(require("./assets/game.html"));
       await asset.downloadAsync();
       setUri(asset.localUri ?? asset.uri);
+      // ATT izni (iOS) -> AdMob baslat -> ilk reklami yukle.
+      try {
+        await requestTrackingPermissionsAsync();
+      } catch {}
+      try {
+        await mobileAds().initialize();
+        loadRewarded();
+      } catch {}
     })();
   }, []);
+
+  const onMessage = (e) => {
+    let msg = null;
+    try {
+      msg = JSON.parse(e.nativeEvent.data);
+    } catch {
+      return;
+    }
+    if (msg?.type !== "showRewarded") return;
+
+    const ad = adRef.current;
+    if (!ad || !adLoadedRef.current) {
+      // Reklam hazir degil -> oyun hediye moduna duser.
+      sendAdResult(false);
+      loadRewarded();
+      return;
+    }
+    let earned = false;
+    const subs = [
+      ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+        earned = true;
+      }),
+      ad.addAdEventListener(AdEventType.CLOSED, () => {
+        subs.forEach((u) => u());
+        sendAdResult(earned);
+        loadRewarded();
+      }),
+      ad.addAdEventListener(AdEventType.ERROR, () => {
+        subs.forEach((u) => u());
+        sendAdResult(false);
+        loadRewarded();
+      }),
+    ];
+    try {
+      ad.show();
+    } catch {
+      subs.forEach((u) => u());
+      sendAdResult(false);
+      loadRewarded();
+    }
+  };
 
   return (
     <View style={styles.root}>
       <StatusBar style="light" hidden />
       {uri && (
         <WebView
+          ref={webRef}
           source={{ uri }}
           originWhitelist={["*"]}
           allowFileAccess
@@ -36,6 +134,7 @@ export default function App() {
           overScrollMode="never"
           setSupportMultipleWindows={false}
           contentInsetAdjustmentBehavior="never"
+          onMessage={onMessage}
           style={styles.web}
           containerStyle={styles.web}
         />
