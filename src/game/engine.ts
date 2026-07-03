@@ -695,6 +695,17 @@ export class Game {
     this.bonus = new Set(this.daily ? [] : prog.bonusFound[this.levelIndex] ?? []);
     this.combo = 0;
 
+    // Yarim kalan seviye kaydini geri yukle (cikip girince devam edilir).
+    const dailyKey = this.daily ? dayStr(new Date()) : null;
+    const mid = this.save.midLevel[getLang()];
+    let restoredHintCells: string[] = [];
+    if (mid && mid.index === this.levelIndex && mid.daily === dailyKey) {
+      for (const w of mid.found)
+        if (this.crossword.placed.some((p) => p.word === w)) this.found.add(w);
+      for (const [w, n] of Object.entries(mid.hints)) this.hintedWords.set(w, n);
+      restoredHintCells = mid.hintCells ?? [];
+    }
+
     const world = this.daily ? "🗓️" : worldEmoji(Math.floor(this.levelIndex / 10));
     this.q("#world-mark").textContent = world;
     this.elLevelName.textContent = this.daily
@@ -703,10 +714,47 @@ export class Game {
     this.wheel.setLetters(this.gen.letters, this.gen.words);
     this.wheel.shuffle();
     this.renderBoard();
+    // Geri yuklenen kelimeleri/ipucu harflerini animasyonsuz ac.
+    for (const w of this.found) this.revealWordInstant(w);
+    for (const k of restoredHintCells) {
+      const el = this.cellEls.get(k);
+      if (el) el.classList.add("revealed", "hinted");
+    }
     this.renderFound();
     this.updateJar();
     this.updateCombo();
     this.updateProgress();
+  }
+
+  /** Yarim kalan seviyeyi kaydet (her kelime/ipucu sonrasi). */
+  private persistMid() {
+    const hintCells: string[] = [];
+    this.cellEls.forEach((el, k) => {
+      if (el.classList.contains("hinted")) hintCells.push(k);
+    });
+    this.save.midLevel[getLang()] = {
+      index: this.levelIndex,
+      daily: this.daily ? dayStr(new Date()) : null,
+      found: [...this.found],
+      hints: Object.fromEntries(this.hintedWords),
+      hintCells,
+    };
+    persist(this.save);
+  }
+
+  private clearMid() {
+    delete this.save.midLevel[getLang()];
+    persist(this.save);
+  }
+
+  private revealWordInstant(word: string) {
+    const p = this.crossword.placed.find((x) => x.word === word);
+    if (!p) return;
+    const dr = p.dir === "V" ? 1 : 0;
+    const dc = p.dir === "H" ? 1 : 0;
+    for (let i = 0; i < word.length; i++) {
+      this.cellEls.get(`${p.row + dr * i},${p.col + dc * i}`)?.classList.add("revealed");
+    }
   }
 
   private renderBoard() {
@@ -857,6 +905,7 @@ export class Game {
         if (d) this.toast(`${word}: ${d}`);
       }
       this.flyFireflies(word);
+      this.persistMid();
       this.updateProgress();
       this.checkAchievements();
       this.checkComplete();
@@ -997,7 +1046,7 @@ export class Game {
         this.save.fireflies -= cost;
         // Bu kelimeye ipucu cezasi ekle (bulununca puani azalacak).
         this.hintedWords.set(target.word, (this.hintedWords.get(target.word) ?? 0) + 1);
-        persist(this.save);
+        this.persistMid();
         this.updateJar();
         return;
       }
@@ -1027,7 +1076,7 @@ export class Game {
     this.addPill(word, false);
     this.floatWord(word, "good", pts, true);
     this.sound.play("reward");
-    persist(this.save);
+    this.persistMid();
     this.updateJar();
     this.updateProgress();
     this.checkAchievements();
@@ -1244,6 +1293,7 @@ export class Game {
   }
 
   private levelComplete() {
+    this.clearMid(); // seviye bitti -> yarim kayit temizlenir
     if (this.daily) {
       this.dailyComplete();
       return;

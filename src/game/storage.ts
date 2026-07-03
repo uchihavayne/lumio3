@@ -11,6 +11,18 @@ export interface LangProgress {
   bonusFound: Record<number, string[]>;
 }
 
+/** Yarim kalan seviyenin ara kaydi: cikip girince kaldigin yerden devam. */
+export interface MidLevel {
+  index: number;
+  /** Gunluk bulmacaysa tarihi (YYYY-MM-DD), degilse null. */
+  daily: string | null;
+  found: string[];
+  /** Kelime -> alinan ipucu sayisi (puan cezasi icin). */
+  hints: Record<string, number>;
+  /** Ipucuyla acilan hucreler ("satir,sutun"). */
+  hintCells: string[];
+}
+
 export interface SaveData {
   lang: Lang | null;
   fireflies: number;
@@ -49,6 +61,8 @@ export interface SaveData {
   highContrast: boolean;
   /** Kelime bulununca anlamini otomatik goster. */
   autoMeaning: boolean;
+  /** Dile gore yarim kalan seviye (varsa). */
+  midLevel: Record<string, MidLevel | undefined>;
 }
 
 export interface Stats {
@@ -94,6 +108,7 @@ const DEFAULT: SaveData = {
   relaxed: false,
   highContrast: false,
   autoMeaning: false,
+  midLevel: {},
 };
 
 export function loadSave(): SaveData {
@@ -106,6 +121,7 @@ export function loadSave(): SaveData {
       ...parsed,
       progress: parsed.progress ?? {},
       stats: { ...DEFAULT.stats, ...(parsed.stats ?? {}) },
+      midLevel: parsed.midLevel ?? {},
     };
   } catch {
     return structuredClone(DEFAULT);
