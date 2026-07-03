@@ -124,7 +124,7 @@ export class Game {
           <div class="tb-bar"><div class="tb-bar-fill" id="prog-fill"></div></div>
         </div>
         <button class="tb-coin" id="jar" aria-label="Fireflies">
-          <span class="tb-coin-ico">🪲</span>
+          <span class="tb-coin-ico">✨</span>
           <span id="jar-count">0</span>
           <div class="jar-fill" id="jar-fill"></div>
           <span class="jar-plus">+</span>
@@ -798,7 +798,7 @@ export class Game {
         (availH - gap * (cw.rows - 1)) / cw.rows
       )
     );
-    const cell = Math.max(20, Math.min(size, 54));
+    const cell = Math.max(26, Math.min(size, 54));
     this.elBoard.style.setProperty("--cell-max", `${cell}px`);
     this.elBoard.style.gap = `${gap}px`;
     this.elBoard.style.width = `${cw.cols * cell + gap * (cw.cols - 1)}px`;
@@ -985,7 +985,7 @@ export class Game {
     const el = document.createElement("div");
     el.className = `float-word ${kind}${penalized ? " penalized" : ""}`;
     if (kind === "bonus") {
-      el.textContent = `+1 🪲 ${word}`;
+      el.textContent = `+1 ✨ ${word}`;
     } else {
       el.textContent = pts ? `${word}  +${pts}${penalized ? " ⬇" : ""}` : word;
     }
@@ -1124,8 +1124,8 @@ export class Game {
     this.sound.play("reward");
     ov.innerHTML = `
       <div class="panel ad-panel">
-        <div class="ad-emoji bob">🪲</div>
-        <h2>+${AD_REWARD} 🪲</h2>
+        <div class="ad-emoji bob">✨</div>
+        <h2>+${AD_REWARD} ✨</h2>
         <div class="win-actions">
           <button class="btn primary" id="ad-done">${t("adClaim")}</button>
         </div>
@@ -1347,7 +1347,19 @@ export class Game {
         jar.top + jar.height / 2,
         18
       );
-      after();
+      // Ödül GÖRÜNÜR şekilde kutlanır; devamla seviye paneline geçilir.
+      ov.innerHTML = `
+        <div class="panel daily-panel">
+          <div class="daily-emoji bob">✨</div>
+          <h2>+${CHEST_REWARD} ✨</h2>
+          <div class="win-actions">
+            <button class="btn primary" id="chest-done">${t("gotIt")}</button>
+          </div>
+        </div>`;
+      this.q("#chest-done").addEventListener("click", () => {
+        this.sound.play("click");
+        after();
+      });
     });
   }
 
@@ -1410,7 +1422,7 @@ export class Game {
         <div class="win-stats">
           <div><b>${this.found.size}</b><span>${t("words")}</span></div>
           <div><b>${this.bonus.size}</b><span>${t("bonus")}</span></div>
-          <div><b>+${firstToday ? 3 : 0}</b><span>🪲</span></div>
+          <div><b>+${firstToday ? 3 : 0}</b><span>✨</span></div>
         </div>
         <div class="win-actions">
           <button class="btn primary" id="btn-share">📤 ${t("share")}</button>

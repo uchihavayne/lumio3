@@ -99,24 +99,42 @@ export function buildCrossword(words: string[]): Crossword {
   commitWord(grid, { word: first, row: 0, col: 0, dir: "H" });
   placements.push({ word: first, row: 0, col: 0, dir: "H" });
 
+  // Calisan sinir kutusu (kompaktlik skoru icin).
+  let bMinR = 0;
+  let bMaxR = 0;
+  let bMinC = 0;
+  let bMaxC = first.length - 1;
+
   for (let w = 1; w < sorted.length; w++) {
     const word = sorted[w];
+    // TUM aday yerlesimleri dene; tahtayi en az buyuteni (en kompakt) sec.
+    // (Eskiden ilk uyan aliniyordu -> izgara geresiz yayilir, hucreler kuculurdu.)
     let best: WorkPlacement | null = null;
+    let bestScore = Infinity;
 
-    // Her harf icin, yerlesmis hucrelerde ayni harfi ara ve dik yerlestir.
-    outer: for (let i = 0; i < word.length; i++) {
+    for (let i = 0; i < word.length; i++) {
       for (const [k, letter] of grid) {
         if (letter !== word[i]) continue;
         const [pr, pc] = k.split(",").map(Number);
-        // Yatay bir kelimeyi keserken dik (V), tersi (H) dene.
         for (const dir of ["H", "V"] as Dir[]) {
           const dr = dir === "V" ? 1 : 0;
           const dc = dir === "H" ? 1 : 0;
           const row = pr - dr * i;
           const col = pc - dc * i;
-          if (fits(grid, word, row, col, dir)) {
+          if (!fits(grid, word, row, col, dir)) continue;
+          const endR = row + dr * (word.length - 1);
+          const endC = col + dc * (word.length - 1);
+          const nMinR = Math.min(bMinR, row);
+          const nMaxR = Math.max(bMaxR, endR);
+          const nMinC = Math.min(bMinC, col);
+          const nMaxC = Math.max(bMaxC, endC);
+          const h = nMaxR - nMinR + 1;
+          const wd = nMaxC - nMinC + 1;
+          // Alan + karesellik: uzun seritler yerine dengeli izgara.
+          const score = h * wd + Math.abs(h - wd) * 2;
+          if (score < bestScore) {
+            bestScore = score;
             best = { word, row, col, dir };
-            break outer;
           }
         }
       }
@@ -125,6 +143,12 @@ export function buildCrossword(words: string[]): Crossword {
     if (best) {
       commitWord(grid, best);
       placements.push(best);
+      const dr = best.dir === "V" ? 1 : 0;
+      const dc = best.dir === "H" ? 1 : 0;
+      bMinR = Math.min(bMinR, best.row);
+      bMaxR = Math.max(bMaxR, best.row + dr * (word.length - 1));
+      bMinC = Math.min(bMinC, best.col);
+      bMaxC = Math.max(bMaxC, best.col + dc * (word.length - 1));
     } else {
       bonus.push(word);
     }

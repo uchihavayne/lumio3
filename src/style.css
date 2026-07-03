@@ -193,9 +193,11 @@ body {
 }
 .cell {
   aspect-ratio: 1;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Köşe yuvarlaklığı hücreyle ölçeklenir — küçük hücre daire gibi görünmesin */
+  border-radius: calc(var(--cell-max, 46px) * 0.2);
+  /* Boş kutular arka plandan net ayrışsın */
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -677,9 +679,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-content: flex-start;
   gap: 6px;
   padding: 4px 6px 0;
-  max-height: 64px;
+  /* SABIT yükseklik: rozetler çoğaldıkça yerleşim kaymasın,
+     tahta yeniden akmasın (iç içe binme hatasının kökü buydu). */
+  height: 64px;
   overflow-y: auto;
 }
 .found-hint {
@@ -978,33 +983,26 @@ body {
   height: 42px;
   padding: 0 13px 0 11px;
   border-radius: 14px;
-  border: 1px solid var(--glass-line);
+  border: 1px solid rgba(255, 207, 107, 0.45);
   background: var(--glass);
   backdrop-filter: blur(8px);
-  color: var(--text);
+  color: var(--gold);
   font-weight: 800;
   font-size: 15px;
   cursor: pointer;
   overflow: hidden;
   transition: transform 0.12s ease;
+  box-shadow: 0 0 14px rgba(255, 207, 107, 0.12);
 }
 .tb-coin:active { transform: scale(0.94); }
-.tb-coin .jar-fill {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 0;
-  background: linear-gradient(180deg, rgba(255, 207, 107, 0.4), rgba(244, 165, 42, 0.25));
-  transition: height 0.5s cubic-bezier(0.2, 0.9, 0.2, 1);
-  z-index: 0;
-}
+/* Eski kavanoz dolgusu kaldirildi: kahverengi blok gibi gorunuyordu. */
+.tb-coin .jar-fill { display: none; }
 .tb-coin-ico,
 .tb-coin > #jar-count {
   position: relative;
   z-index: 1;
 }
-.tb-coin-ico { font-size: 17px; filter: drop-shadow(0 0 6px rgba(255, 207, 107, 0.6)); }
+.tb-coin-ico { font-size: 17px; filter: drop-shadow(0 0 7px rgba(255, 207, 107, 0.9)); }
 .tb-coin .jar-plus {
   position: absolute;
   top: -5px;
@@ -1024,7 +1022,6 @@ body {
 
 /* Tahta — biraz daha büyük, daha yumuşak */
 .board-wrap { padding: 8px 0; }
-.cell { border-radius: 11px; }
 .cell.revealed {
   box-shadow: 0 5px 16px rgba(244, 165, 42, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
