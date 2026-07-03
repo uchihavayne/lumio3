@@ -25,12 +25,15 @@ export const ADS_ENABLED = true;
 // resmî TEST kimlikleridir; yayına çıkmadan gerçekleriyle değiştirin ve
 // testMode'u false yapın. App ID'yi ayrıca iOS Info.plist / Android manifest'e
 // eklemeniz gerekir — bkz. store/ADS.md)
+// Not: iOS yayın sürümü Expo kabındadır ve reklam kimlikleri native tarafta
+// (native/App.js + native/app.json) tanımlıdır. Buradakiler yalnızca olası
+// Capacitor derlemeleri içindir.
 export const ADMOB = {
-  testMode: true,
+  testMode: false,
   // Ödüllü reklam birimi (platforma göre)
-  rewardedIos: "ca-app-pub-3940256099942544/1712485313", // TEST
-  rewardedAndroid: "ca-app-pub-3940256099942544/5224354917", // TEST
+  rewardedIos: "ca-app-pub-3323428505450637/8220031671", // GERÇEK
+  rewardedAndroid: "ca-app-pub-3940256099942544/5224354917", // TEST (Android yayında değişecek)
   // App ID (Info.plist/manifest içine de gider)
-  appIdIos: "ca-app-pub-3940256099942544~1458002511", // TEST
+  appIdIos: "ca-app-pub-3323428505450637~6110919254", // GERÇEK
   appIdAndroid: "ca-app-pub-3940256099942544~3347511713", // TEST
 };

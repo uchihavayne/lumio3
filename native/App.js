@@ -6,9 +6,6 @@
 //   -> AdMob odullu reklam gosterilir
 //   -> sonuc injectJavaScript ile window.__lumioAdResult(true/false) olarak doner
 //
-// ⚠️ YAYINDAN ONCE: asagidaki REWARDED_AD_ID'yi AdMob konsolundan aldigin
-// GERCEK odullu reklam birimi kimligiyle degistir (app.json'daki ios_app_id
-// ile birlikte). Su anki degerler Google'in resmi TEST kimlikleri.
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -22,10 +19,14 @@ import mobileAds, {
   TestIds,
 } from "react-native-google-mobile-ads";
 
-const REWARDED_AD_ID = Platform.select({
-  ios: TestIds.REWARDED, // TEST — yayin oncesi: "ca-app-pub-XXXX/YYYY"
-  android: TestIds.REWARDED,
-});
+// Gelistirmede otomatik TEST reklami, yayinda gercek birim.
+// (Android yayina cikarken gercek Android birimi eklenecek.)
+const REWARDED_AD_ID = __DEV__
+  ? TestIds.REWARDED
+  : Platform.select({
+      ios: "ca-app-pub-3323428505450637/8220031671",
+      android: TestIds.REWARDED,
+    });
 
 export default function App() {
   const [uri, setUri] = useState(null);
