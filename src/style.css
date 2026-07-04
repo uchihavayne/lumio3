@@ -990,34 +990,26 @@ body {
   font-weight: 800;
   font-size: 15px;
   cursor: pointer;
-  overflow: hidden;
   transition: transform 0.12s ease;
   box-shadow: 0 0 14px rgba(255, 207, 107, 0.12);
 }
 .tb-coin:active { transform: scale(0.94); }
 /* Eski kavanoz dolgusu kaldirildi: kahverengi blok gibi gorunuyordu. */
 .tb-coin .jar-fill { display: none; }
-.tb-coin-ico,
-.tb-coin > #jar-count {
-  position: relative;
-  z-index: 1;
-}
 .tb-coin-ico { font-size: 17px; filter: drop-shadow(0 0 7px rgba(255, 207, 107, 0.9)); }
-.tb-coin .jar-plus {
-  position: absolute;
-  top: -5px;
-  right: -4px;
-  width: 17px;
-  height: 17px;
+/* "+" artik cip icinde, sagda kucuk bir rozet — tasip kesilmiyor. */
+.tb-coin-plus {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 1px;
   border-radius: 50%;
   background: var(--good);
   color: #06301f;
   font-size: 12px;
   font-weight: 900;
-  line-height: 17px;
-  text-align: center;
-  z-index: 2;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  line-height: 1;
 }
 
 /* Tahta — biraz daha büyük, daha yumuşak */

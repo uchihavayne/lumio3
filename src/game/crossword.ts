@@ -94,6 +94,11 @@ export function buildCrossword(words: string[]): Crossword {
     return { placed: [], bonus: [], cells: [], rows: 0, cols: 0 };
   }
 
+  // Telefonda hucreler kucuk kalmasin diye tahtayi DAR tut: genislik en uzun
+  // kelimeyi cok az asabilir. Boylece sutun sayisi dusuk -> hucreler buyuk.
+  // (Yataya yayilan yerlesimler reddedilir; bulmaca daha kompakt/karesel olur.)
+  const maxCols = sorted[0].length + 1;
+
   // Ilk (en uzun) kelimeyi yatay yerlestir.
   const first = sorted[0];
   commitWord(grid, { word: first, row: 0, col: 0, dir: "H" });
@@ -130,6 +135,8 @@ export function buildCrossword(words: string[]): Crossword {
           const nMaxC = Math.max(bMaxC, endC);
           const h = nMaxR - nMinR + 1;
           const wd = nMaxC - nMinC + 1;
+          // Genislik tavanini asan yerlesimi reddet (tahta dar kalsin).
+          if (wd > maxCols) continue;
           // Alan + karesellik: uzun seritler yerine dengeli izgara.
           const score = h * wd + Math.abs(h - wd) * 2;
           if (score < bestScore) {

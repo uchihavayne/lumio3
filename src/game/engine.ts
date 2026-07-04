@@ -58,7 +58,6 @@ export class Game {
   private elLevelName!: HTMLElement;
   private elProg!: HTMLElement;
   private elJarCount!: HTMLElement;
-  private elJarFill!: HTMLElement;
   private elBoard!: HTMLElement;
   private elFound!: HTMLElement;
   private elPreview!: HTMLElement;
@@ -94,6 +93,13 @@ export class Game {
     // Ekran boyutu/yönü değişince tahtayı yeniden sığdır.
     window.addEventListener("resize", () => this.layoutBoard());
     this.buildShell();
+    // WKWebView'de ilk ölçüm bayat kalabiliyor (yazı tipi/viewport geç
+    // oturuyor) -> tahta kabının boyutu her değiştiğinde yeniden sığdır.
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(() => this.layoutBoard()).observe(
+        this.elBoard.parentElement!
+      );
+    }
 
     if (this.save.lang) {
       setLang(this.save.lang);
@@ -126,15 +132,14 @@ export class Game {
         <button class="tb-coin" id="jar" aria-label="Fireflies">
           <span class="tb-coin-ico">✨</span>
           <span id="jar-count">0</span>
-          <div class="jar-fill" id="jar-fill"></div>
-          <span class="jar-plus">+</span>
+          <span class="tb-coin-plus">+</span>
         </button>
       </div>
       <div class="board-wrap"><div class="world-mark" id="world-mark"></div><div class="board" id="board"></div></div>
       <div class="found-strip" id="found"></div>
-      <div class="combo" id="combo"></div>
-      <div class="preview" id="preview"></div>
       <div class="wheel-area">
+        <div class="combo" id="combo"></div>
+        <div class="preview" id="preview"></div>
         <div class="wheel-controls">
           <button class="icon-btn" id="btn-hint">💡</button>
           <button class="icon-btn" id="btn-reveal">🔓</button>
@@ -149,7 +154,6 @@ export class Game {
     this.elLevelName = this.q("#level-name");
     this.elProg = this.q("#prog-fill");
     this.elJarCount = this.q("#jar-count");
-    this.elJarFill = this.q("#jar-fill");
     this.elBoard = this.q("#board");
     this.elFound = this.q("#found");
     this.elPreview = this.q("#preview");
@@ -789,16 +793,16 @@ export class Game {
     const cw = this.crossword;
     const wrap = this.elBoard.parentElement;
     if (!wrap) return;
-    const availW = Math.min(wrap.clientWidth * 0.94, 440);
-    const availH = Math.max(wrap.clientHeight - 12, 80);
-    const gap = Math.round(Math.min(Math.max(availW * 0.014, 3), 6));
+    const availW = Math.min(wrap.clientWidth * 0.98, 460);
+    const availH = Math.max(wrap.clientHeight - 8, 80);
+    const gap = Math.round(Math.min(Math.max(availW * 0.012, 3), 6));
     const size = Math.floor(
       Math.min(
         (availW - gap * (cw.cols - 1)) / cw.cols,
         (availH - gap * (cw.rows - 1)) / cw.rows
       )
     );
-    const cell = Math.max(26, Math.min(size, 54));
+    const cell = Math.max(28, Math.min(size, 60));
     this.elBoard.style.setProperty("--cell-max", `${cell}px`);
     this.elBoard.style.gap = `${gap}px`;
     this.elBoard.style.width = `${cw.cols * cell + gap * (cw.cols - 1)}px`;
@@ -998,9 +1002,6 @@ export class Game {
   // ---------- Kavanoz ----------
   private updateJar() {
     this.elJarCount.textContent = String(this.save.fireflies);
-    const cap = 5;
-    const fill = Math.min(this.save.fireflies, cap) / cap;
-    this.elJarFill.style.height = `${fill * 100}%`;
     this.elHint.classList.toggle("dim", this.save.fireflies <= 0);
   }
 
@@ -1084,8 +1085,21 @@ export class Game {
   }
 
   // ---------- Ateşböceği: gerçek ödüllü reklam veya hediye ----------
+  private static readonly GIFT_LIMIT = 3; // reklamsız günlük ücretsiz hediye
+
+  /** Bugün kaç ücretsiz hediye alındı (gün değişince sıfırlanır). */
+  private giftsUsedToday(): number {
+    const today = dayStr(new Date());
+    if (this.save.giftDay !== today) {
+      this.save.giftDay = today;
+      this.save.giftCount = 0;
+      persist(this.save);
+    }
+    return this.save.giftCount;
+  }
+
   private async showAdOffer() {
-    // Native + AdMob varsa gerçek ödüllü reklam; web/başarısızsa hediye.
+    // Native + AdMob varsa gerçek ödüllü reklam -> sınırsız ödül.
     if (ADS_ENABLED) {
       const rewarded = await showRewardedAd();
       if (rewarded) {
@@ -1093,23 +1107,48 @@ export class Game {
         return;
       }
     }
+    // Reklam yoksa/izlenmediyse: günlük sınırlı ücretsiz hediye.
     this.showGift();
   }
 
-  /** Reklam kapalıyken: doğrudan ateşböceği hediyesi (gerçek reklam yok). */
+  /** Reklamsız ücretsiz hediye (günde en fazla GIFT_LIMIT kez). */
   private showGift() {
     const ov = this.q("#overlay");
+    const used = this.giftsUsedToday();
+    const left = Math.max(0, Game.GIFT_LIMIT - used);
+    if (left <= 0) {
+      ov.innerHTML = `
+        <div class="panel ad-panel">
+          <div class="ad-emoji">🌙</div>
+          <h2>${t("giftEmptyTitle")}</h2>
+          <p class="win-sub">${t("giftEmptyDesc")}</p>
+          <div class="win-actions">
+            <button class="btn primary" id="gift-close">${t("closeBtn")}</button>
+          </div>
+        </div>`;
+      ov.classList.remove("hidden");
+      this.q("#gift-close").addEventListener("click", () => {
+        this.sound.play("click");
+        ov.classList.add("hidden");
+      });
+      return;
+    }
     ov.innerHTML = `
       <div class="panel ad-panel">
         <div class="ad-emoji">🎁</div>
         <h2>${t("adTitle")}</h2>
+        <p class="win-sub">${t("giftLeft", { n: left })}</p>
         <div class="win-actions">
           <button class="btn primary" id="gift-claim">${t("adClaim")}</button>
           <button class="btn ghost" id="gift-close">${t("adNoThanks")}</button>
         </div>
       </div>`;
     ov.classList.remove("hidden");
-    this.q("#gift-claim").addEventListener("click", () => this.adReward());
+    this.q("#gift-claim").addEventListener("click", () => {
+      this.save.giftCount = this.giftsUsedToday() + 1;
+      persist(this.save);
+      this.adReward();
+    });
     this.q("#gift-close").addEventListener("click", () => {
       this.sound.play("click");
       ov.classList.add("hidden");

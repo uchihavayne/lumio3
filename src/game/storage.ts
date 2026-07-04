@@ -63,6 +63,9 @@ export interface SaveData {
   autoMeaning: boolean;
   /** Dile gore yarim kalan seviye (varsa). */
   midLevel: Record<string, MidLevel | undefined>;
+  /** Reklamsiz hediye limiti icin: gun (YYYY-MM-DD) ve o gunku hediye sayisi. */
+  giftDay: string | null;
+  giftCount: number;
 }
 
 export interface Stats {
@@ -109,6 +112,8 @@ const DEFAULT: SaveData = {
   highContrast: false,
   autoMeaning: false,
   midLevel: {},
+  giftDay: null,
+  giftCount: 0,
 };
 
 export function loadSave(): SaveData {
