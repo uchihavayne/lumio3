@@ -58,34 +58,21 @@ body {
   touch-action: none;
 }
 
-/* Aurora arka plan */
-body::before,
-body::after {
+/* Arka plan: temiz, koyu, tek katman derinlik. Combo yükseldikçe üstte
+   çok hafif bir renk parıltısı belirir (dikkat dağıtmadan). */
+body::before {
   content: "";
   position: fixed;
-  inset: -20%;
+  inset: 0;
   z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(45% 35% at 20% 18%, rgba(var(--aur1), calc(0.10 + var(--aurora) * 0.35)), transparent 60%),
-    radial-gradient(50% 40% at 82% 22%, rgba(var(--aur2), calc(0.10 + var(--aurora) * 0.30)), transparent 60%),
-    radial-gradient(60% 45% at 50% 92%, rgba(var(--aur3), calc(0.06 + var(--aurora) * 0.22)), transparent 60%);
-  filter: blur(8px);
-  animation: drift 18s ease-in-out infinite alternate;
-  transition: background 0.5s ease;
-}
-body::after {
-  animation-duration: 26s;
-  animation-direction: alternate-reverse;
-  opacity: 0.7;
-}
-@keyframes drift {
-  from { transform: translate3d(-2%, -1%, 0) scale(1); }
-  to { transform: translate3d(2%, 2%, 0) scale(1.08); }
+    radial-gradient(70% 40% at 50% 0%, rgba(var(--aur2), calc(0.06 + var(--aurora) * 0.14)), transparent 70%);
+  transition: background 0.6s ease;
 }
 body {
   background:
-    radial-gradient(120% 80% at 50% -10%, var(--bg-top) 0%, var(--bg) 55%, var(--bg-bot) 100%);
+    radial-gradient(130% 90% at 50% -20%, var(--bg-top) 0%, var(--bg) 50%, var(--bg-bot) 100%);
   transition: background 0.5s ease;
 }
 
@@ -104,7 +91,7 @@ body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+  padding: env(safe-area-inset-top) 10px env(safe-area-inset-bottom);
 }
 
 /* ---------- HUD ---------- */
@@ -215,6 +202,9 @@ body {
   box-shadow: 0 4px 14px rgba(244, 165, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 .cell.revealed span { transform: scale(1); opacity: 1; }
+/* Açılmış harf: dokunulabilir (anlamı gösterir) */
+.cell.revealed { cursor: pointer; }
+.cell.revealed:active { filter: brightness(1.08); }
 .cell.hinted {
   background: linear-gradient(180deg, #cfe0ff, #9db8ff);
   border-color: rgba(157, 184, 255, 0.9);
@@ -674,44 +664,6 @@ body {
 .score-chip .trophy { font-size: 15px; }
 .level-badge { font-size: 16px; }
 
-/* ---------- Bulunan kelime şeritleri ---------- */
-.found-strip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: flex-start;
-  gap: 6px;
-  padding: 4px 6px 0;
-  /* SABIT yükseklik: rozetler çoğaldıkça yerleşim kaymasın,
-     tahta yeniden akmasın (iç içe binme hatasının kökü buydu). */
-  height: 64px;
-  overflow-y: auto;
-}
-.found-hint {
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
-  padding: 4px 0;
-}
-.found-pill {
-  border: 1px solid rgba(91, 227, 163, 0.4);
-  background: rgba(91, 227, 163, 0.12);
-  color: var(--good);
-  font-weight: 800;
-  font-size: 12.5px;
-  letter-spacing: 1px;
-  padding: 4px 11px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-.found-pill:active { transform: scale(0.92); }
-.found-pill.bonus {
-  border-color: rgba(255, 207, 107, 0.5);
-  background: rgba(255, 207, 107, 0.14);
-  color: var(--gold);
-}
-
 /* ---------- Anlam popoveri ---------- */
 .defpop {
   position: fixed;
@@ -1039,10 +991,6 @@ body {
 /* Önizleme balonu — biraz daha belirgin */
 .preview { height: 50px; font-size: 25px; }
 
-/* Bulunan kelime şeridi */
-.found-strip { padding: 6px 6px 0; }
-.found-pill { padding: 5px 12px; font-size: 13px; }
-
 /* İpucu cezalı (puanı azaltılmış) kelimenin uçan metni */
 .float-word.penalized { color: #ffb27a; }
 
@@ -1114,20 +1062,7 @@ body {
 .nb-word:hover { border-color: rgba(255, 207, 107, 0.5); }
 .nb-empty { margin: 28px 0; }
 
-/* Dünya filigranı — bölüme göre değişen soluk arka plan emojisi */
 .board-wrap { position: relative; }
-.world-mark {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: min(52vw, 230px);
-  line-height: 1;
-  opacity: 0.06;
-  pointer-events: none;
-  z-index: 0;
-  filter: grayscale(0.2);
-}
 .board { position: relative; z-index: 1; }
 
 /* Yüksek kontrast (renk körü dostu): mavi=iyi, turuncu=hata; kalın kenar */
@@ -1137,7 +1072,6 @@ body.high-contrast {
   --muted: #b9c2e0;
 }
 body.high-contrast .cell.revealed { outline: 2px solid rgba(0, 0, 0, 0.55); outline-offset: -2px; }
-body.high-contrast .found-pill { border-width: 2px; }
 body.high-contrast .tb-bar-fill { background: linear-gradient(90deg, #4cc9ff, #9be0ff); }
 
 /* Seri alevi (ana ekran) */
@@ -1252,7 +1186,6 @@ body.high-contrast .tb-bar-fill { background: linear-gradient(90deg, #4cc9ff, #9
 body.big-text .cell { font-size: calc(var(--cell-max, 46px) * 0.55); }
 body.big-text .wheel-tile { font-size: clamp(26px, 8vw, 37px); }
 body.big-text .preview { font-size: 30px; height: 56px; }
-body.big-text .found-pill { font-size: 15px; }
 body.big-text .tb-level { font-size: 17px; }
 body.big-text .nb-word { font-size: 15px; }
 body.big-text .set-row,

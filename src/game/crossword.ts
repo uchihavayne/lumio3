@@ -94,10 +94,10 @@ export function buildCrossword(words: string[]): Crossword {
     return { placed: [], bonus: [], cells: [], rows: 0, cols: 0 };
   }
 
-  // Telefonda hucreler kucuk kalmasin diye tahtayi DAR tut: genislik en uzun
-  // kelimeyi cok az asabilir. Boylece sutun sayisi dusuk -> hucreler buyuk.
-  // (Yataya yayilan yerlesimler reddedilir; bulmaca daha kompakt/karesel olur.)
-  const maxCols = sorted[0].length + 1;
+  // Telefonda hucreler kucuk kalmasin diye tahtayi hem DAR hem KISA tut:
+  // genislik ve yukseklik en uzun kelimeyi cok az asabilir. Sutun/satir
+  // sayisi dusuk kalir -> hucreler buyuk. Sigmayan kelimeler bonusa duser.
+  const maxDim = Math.max(sorted[0].length, 5);
 
   // Ilk (en uzun) kelimeyi yatay yerlestir.
   const first = sorted[0];
@@ -135,8 +135,8 @@ export function buildCrossword(words: string[]): Crossword {
           const nMaxC = Math.max(bMaxC, endC);
           const h = nMaxR - nMinR + 1;
           const wd = nMaxC - nMinC + 1;
-          // Genislik tavanini asan yerlesimi reddet (tahta dar kalsin).
-          if (wd > maxCols) continue;
+          // Genislik/yukseklik tavanini asan yerlesimi reddet (tahta kompakt).
+          if (wd > maxDim || h > maxDim) continue;
           // Alan + karesellik: uzun seritler yerine dengeli izgara.
           const score = h * wd + Math.abs(h - wd) * 2;
           if (score < bestScore) {

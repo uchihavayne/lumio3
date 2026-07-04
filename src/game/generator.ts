@@ -27,9 +27,10 @@ const SAFE_EMOJIS = [
   "💎", "🎈", "🦋", "🌷", "🍀", "🌻", "🗝️", "🪶", "🌈", "⛵",
 ];
 
-// Kademeli zorluk: ilk seviyeler kisa (kolay), sonra uzar; karisik ama yukari yonlu.
-const LEN_SCHEDULE = [4, 4, 4, 5, 4, 5, 5, 6, 5, 6, 6, 7, 6, 7, 6, 7, 7, 6, 7, 7];
-const LEN_TAIL = [5, 6, 7, 6, 7, 5, 7, 6];
+// Kademeli zorluk: ilk seviyeler kisa (kolay), sonra uzar. En fazla 6 harf —
+// tahta telefonda buyuk kutularla sigsin ve yasli oyunculara kolay olsun.
+const LEN_SCHEDULE = [4, 4, 4, 5, 4, 5, 5, 6, 5, 6, 5, 6, 6, 5, 6, 6, 5, 6, 6, 6];
+const LEN_TAIL = [5, 6, 5, 6, 6, 5, 6, 6];
 const MIN_SUBWORDS = 4;
 
 function schedLen(p: number): number {
@@ -189,7 +190,7 @@ function getCatalog(lang: Lang, salt: number): Catalog {
    *  - carktaki HER harf en az bir taze kelimede gecmeli (bosta harf olmasin)
    */
   // Seviye basina en fazla bu kadar kelime tuketilir (arz daha uzun dayanir).
-  const WORDS_PER_LEVEL = 9;
+  const WORDS_PER_LEVEL = 6;
 
   const freshList = (pool: string): string[] | null => {
     const all = [...new Set(subsOf(pool))]

@@ -59,7 +59,6 @@ export class Game {
   private elProg!: HTMLElement;
   private elJarCount!: HTMLElement;
   private elBoard!: HTMLElement;
-  private elFound!: HTMLElement;
   private elPreview!: HTMLElement;
   private elCombo!: HTMLElement;
   private elHint!: HTMLButtonElement;
@@ -135,8 +134,7 @@ export class Game {
           <span class="tb-coin-plus">+</span>
         </button>
       </div>
-      <div class="board-wrap"><div class="world-mark" id="world-mark"></div><div class="board" id="board"></div></div>
-      <div class="found-strip" id="found"></div>
+      <div class="board-wrap"><div class="board" id="board"></div></div>
       <div class="wheel-area">
         <div class="combo" id="combo"></div>
         <div class="preview" id="preview"></div>
@@ -155,7 +153,6 @@ export class Game {
     this.elProg = this.q("#prog-fill");
     this.elJarCount = this.q("#jar-count");
     this.elBoard = this.q("#board");
-    this.elFound = this.q("#found");
     this.elPreview = this.q("#preview");
     this.elCombo = this.q("#combo");
     this.elHint = this.q("#btn-hint");
@@ -711,7 +708,6 @@ export class Game {
     }
 
     const world = this.daily ? "🗓️" : worldEmoji(Math.floor(this.levelIndex / 10));
-    this.q("#world-mark").textContent = world;
     this.elLevelName.textContent = this.daily
       ? `🗓️ ${t("dailyPuzzle")}`
       : `${world} ${t("levelWord")} ${this.levelIndex + 1}`;
@@ -724,7 +720,6 @@ export class Game {
       const el = this.cellEls.get(k);
       if (el) el.classList.add("revealed", "hinted");
     }
-    this.renderFound();
     this.updateJar();
     this.updateCombo();
     this.updateProgress();
@@ -776,11 +771,32 @@ export class Game {
       const span = document.createElement("span");
       span.textContent = cell.letter;
       el.appendChild(span);
+      // Tamamlanmis kelimenin harfine dokununca anlamini goster
+      // (ayri "bulunan kelimeler" seridi yok; anlam dogrudan tahtadan).
+      el.addEventListener("click", () => this.onCellTap(cell.row, cell.col));
       this.elBoard.appendChild(el);
       this.cellEls.set(`${cell.row},${cell.col}`, el);
     }
 
     this.layoutBoard();
+  }
+
+  /** Tahtadaki bir harfe dokunma: o hücreden geçen bulunmuş kelimenin anlamı. */
+  private onCellTap(row: number, col: number) {
+    const el = this.cellEls.get(`${row},${col}`);
+    if (!el || !el.classList.contains("revealed")) return; // henüz açılmamış
+    // Bu hücreden geçen tüm yerleşik kelimelerden BULUNMUŞ olanları topla.
+    const here = this.crossword.placed.filter((p) => {
+      const dr = p.dir === "V" ? 1 : 0;
+      const dc = p.dir === "H" ? 1 : 0;
+      for (let i = 0; i < p.word.length; i++)
+        if (p.row + dr * i === row && p.col + dc * i === col) return true;
+      return false;
+    }).filter((p) => this.found.has(p.word));
+    if (!here.length) return;
+    // Kesişim hücresiyse en uzun kelimeyi göster (daha bilgilendirici).
+    here.sort((a, b) => b.word.length - a.word.length);
+    this.showDefinition(here[0].word, false);
   }
 
   /**
@@ -793,43 +809,19 @@ export class Game {
     const cw = this.crossword;
     const wrap = this.elBoard.parentElement;
     if (!wrap) return;
-    const availW = Math.min(wrap.clientWidth * 0.98, 460);
-    const availH = Math.max(wrap.clientHeight - 8, 80);
-    const gap = Math.round(Math.min(Math.max(availW * 0.012, 3), 6));
+    const availW = Math.min(wrap.clientWidth, 460);
+    const availH = Math.max(wrap.clientHeight - 6, 80);
+    const gap = Math.round(Math.min(Math.max(availW * 0.012, 3), 7));
     const size = Math.floor(
       Math.min(
         (availW - gap * (cw.cols - 1)) / cw.cols,
         (availH - gap * (cw.rows - 1)) / cw.rows
       )
     );
-    const cell = Math.max(28, Math.min(size, 60));
+    const cell = Math.max(30, Math.min(size, 76));
     this.elBoard.style.setProperty("--cell-max", `${cell}px`);
     this.elBoard.style.gap = `${gap}px`;
     this.elBoard.style.width = `${cw.cols * cell + gap * (cw.cols - 1)}px`;
-  }
-
-  private renderFound() {
-    this.elFound.innerHTML = "";
-    if (this.found.size === 0 && this.bonus.size === 0) {
-      const hint = document.createElement("span");
-      hint.className = "found-hint";
-      hint.textContent = t("tapForMeaning");
-      this.elFound.appendChild(hint);
-      return;
-    }
-    for (const w of this.found) this.addPill(w, false);
-    for (const w of this.bonus) this.addPill(w, true);
-  }
-
-  private addPill(word: string, isBonus: boolean) {
-    // Placeholder ipucunu temizle.
-    const hint = this.elFound.querySelector(".found-hint");
-    if (hint) hint.remove();
-    const pill = document.createElement("button");
-    pill.className = `found-pill ${isBonus ? "bonus" : ""}`;
-    pill.textContent = word;
-    pill.addEventListener("click", () => this.showDefinition(word, isBonus));
-    this.elFound.appendChild(pill);
   }
 
   // ---------- Kelime anlami ----------
@@ -893,7 +885,6 @@ export class Game {
       const hints = this.hintedWords.get(word) ?? 0;
       const pts = Math.max(Math.round(base * Math.max(0, 1 - 0.25 * hints)), word.length * 2);
       this.addScore(pts);
-      this.addPill(word, false);
       this.floatWord(word, "good", pts, hints > 0);
       // Pangram: çarkın tüm harflerini kullanan kelime -> bonus + ışıltı.
       if (hints === 0 && new Set(word).size === new Set(this.gen.letters).size) {
@@ -926,7 +917,6 @@ export class Game {
       this.bumpCombo();
       this.addScore(word.length * 15);
       this.updateJar();
-      this.addPill(word, true);
       this.floatWord(word, "bonus");
       this.flyFireflies(word, true);
       this.toast(`${t("bonusFound")} (${word})`);
@@ -1074,7 +1064,6 @@ export class Game {
     this.revealWord(word);
     const pts = word.length * 2;
     this.addScore(pts);
-    this.addPill(word, false);
     this.floatWord(word, "good", pts, true);
     this.sound.play("reward");
     this.persistMid();
