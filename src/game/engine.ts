@@ -134,16 +134,16 @@ export class Game {
           <span class="tb-coin-plus">+</span>
         </button>
       </div>
+      <div class="wheel-controls">
+        <button class="icon-btn" id="btn-hint">💡</button>
+        <button class="icon-btn" id="btn-reveal">🔓</button>
+        <button class="icon-btn" id="btn-shuffle">🔀</button>
+        <button class="icon-btn" id="btn-sound">🔊</button>
+      </div>
       <div class="board-wrap"><div class="board" id="board"></div></div>
       <div class="wheel-area">
         <div class="combo" id="combo"></div>
         <div class="preview" id="preview"></div>
-        <div class="wheel-controls">
-          <button class="icon-btn" id="btn-hint">💡</button>
-          <button class="icon-btn" id="btn-reveal">🔓</button>
-          <button class="icon-btn" id="btn-shuffle">🔀</button>
-          <button class="icon-btn" id="btn-sound">🔊</button>
-        </div>
         <div id="wheel-host"></div>
       </div>
       <div class="overlay hidden" id="overlay"></div>
@@ -818,7 +818,7 @@ export class Game {
         (availH - gap * (cw.rows - 1)) / cw.rows
       )
     );
-    const cell = Math.max(30, Math.min(size, 76));
+    const cell = Math.max(34, Math.min(size, 92));
     this.elBoard.style.setProperty("--cell-max", `${cell}px`);
     this.elBoard.style.gap = `${gap}px`;
     this.elBoard.style.width = `${cw.cols * cell + gap * (cw.cols - 1)}px`;

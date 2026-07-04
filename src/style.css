@@ -188,8 +188,8 @@ body {
   display: grid;
   place-items: center;
   font-weight: 800;
-  /* Yazı hücreyle birlikte ölçeklenir (JS --cell-max'ı yükseklige göre kurar) */
-  font-size: calc(var(--cell-max, 46px) * 0.46);
+  /* Yazı hücreden bir tık küçük — kutu büyük, harf ferah durur */
+  font-size: calc(var(--cell-max, 46px) * 0.4);
   color: transparent;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: background 0.3s ease, border-color 0.3s ease;
@@ -288,7 +288,9 @@ body {
   display: flex;
   justify-content: center;
   gap: 14px;
-  margin-bottom: 10px;
+  /* Artık üstte, seviye çubuğunun hemen altında (board'a yer açar). */
+  flex: none;
+  padding: 6px 0 4px;
 }
 .wheel {
   position: relative;
@@ -979,12 +981,12 @@ body {
 .wheel-tile.active {
   box-shadow: 0 0 22px rgba(255, 207, 107, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
-.wheel-controls { gap: 16px; margin-bottom: 12px; }
+.wheel-controls { gap: 16px; }
 .wheel-controls .icon-btn {
-  width: 48px;
-  height: 48px;
-  font-size: 21px;
-  border-radius: 16px;
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+  border-radius: 15px;
 }
 .wheel-area { padding-bottom: 16px; }
 
