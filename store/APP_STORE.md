@@ -7,6 +7,9 @@ iOS önce, Android sonra. Aşağıdaki metinleri App Store Connect'e yapıştır
 - **App Name (max 30):** `Lumio: Word Puzzle`
 - **Subtitle (max 30):** `Connect letters & crossword`
   - TR alternatif: `Kelime bağla & bulmaca`
+- **Promotional Text (max 170, sürüm gerektirmeden değişir):**
+  - EN: `Relax with endless word puzzles — swipe to connect letters, fill the crossword, and learn a new word every day. 6 languages, offline, no timers.`
+  - TR: `Sonsuz kelime bulmacalarıyla rahatla — harfleri kaydır, crossword'ü doldur, her gün yeni bir kelime öğren. 6 dil, çevrimdışı, süre baskısı yok.`
 - **Keywords (max 100, virgülle, boşluksuz):**
   `word,connect,crossword,letters,vocabulary,brain,anagram,puzzle,search,daily,offline,relax,spelling`
 - **Bundle ID:** `com.lumio.game`
