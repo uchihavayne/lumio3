@@ -8,9 +8,9 @@
     "sync": "cd .. && npm run native:sync"
   },
   "dependencies": {
-    "expo": "^57.0.1",
-    "expo-asset": "~57.0.2",
-    "expo-splash-screen": "~57.0.1",
+    "expo": "~57.0.4",
+    "expo-asset": "~57.0.3",
+    "expo-splash-screen": "~57.0.2",
     "expo-status-bar": "~57.0.0",
     "expo-tracking-transparency": "~57.0.0",
     "react": "19.2.3",
