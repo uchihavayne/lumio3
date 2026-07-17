@@ -1,4 +1,35 @@
-# App Review — Guideline 2.1 cevabı
+# ⚠️ GÜNCEL (2. ret — ATT): önce şunu oku
+
+Apple ikinci turda "ATT çerçevesi var ama izin penceresi görünmüyor" dedi.
+ÇÖZÜM: Takibi tamamen kaldırdık — artık **kişiselleştirilmemiş reklam**
+gösteriliyor, ATT izni İSTENMİYOR. Yapılacaklar:
+
+1. **Yeni build al ve gönder** (native değişti):
+   ```
+   cd C:\Users\uchih\Downloads\stampd\harfika\native
+   npx eas-cli build -p ios --profile production
+   npx eas-cli submit -p ios --latest
+   ```
+2. **App Store Connect > App Privacy**'yi güncelle:
+   - Data Collection'da **Device ID → "Used for Tracking" = No** yap
+     (eskiden Yes'ti). Tüm veri kalemlerinde **Tracking: No** olmalı.
+   - Yani App Privacy'de artık HİÇBİR şey "tracking" değil. (Reklam için
+     Device ID hâlâ "Third-Party Advertising" amacıyla toplanır ama TAKİP
+     değil — "Used for Tracking: No".)
+3. Yeni build'i seç → **App Review'a şu mesajı yaz**:
+   ```
+   The app no longer uses App Tracking Transparency. We removed the ATT
+   framework and now request only non-personalized ads via Google AdMob, so
+   no tracking permission is needed. App Privacy has been updated to declare
+   no tracking. A new build (with ATT fully removed) is attached.
+   ```
+
+Bu, ATT sorununu kökten çözer — Apple statik taramada artık ATT çerçevesi/izin
+metni bulamaz, prompt aramaz.
+
+---
+
+# App Review — Guideline 2.1 cevabı (ilk tur, referans)
 
 Aşağıdaki metni App Store Connect > (reddedilen sürüm) > **Reply to App Review**
 kutusuna yapıştır. Ayrıca **App Review Information > Notes** alanına da aynısını
@@ -52,8 +83,8 @@ None. The app is not in a regulated industry. All word and definition content is
 original and owned by us. No protected third-party material is used.
 
 ADDITIONAL NOTE ON PERMISSIONS
-On launch the app shows the App Tracking Transparency (ATT) prompt because it
-displays AdMob ads. Regardless of the user's choice, the game is fully playable.
+The app does NOT track users and does not use App Tracking Transparency. It
+requests only non-personalized ads from Google AdMob. No IDFA, no ATT prompt.
 ```
 
 ---

@@ -6,12 +6,14 @@
 //   -> AdMob odullu reklam gosterilir
 //   -> sonuc injectJavaScript ile window.__lumioAdResult(true/false) olarak doner
 //
+// GIZLILIK: Uygulama kullaniciyi TAKIP ETMEZ. Yalnizca kisisellestirilmemis
+// (non-personalized) odullu reklam gosterilir; IDFA/ATT kullanilmaz. Bu yuzden
+// App Tracking Transparency izni istenmez ve App Privacy'de "tracking: No".
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 import { Asset } from "expo-asset";
-import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
 import mobileAds, {
   RewardedAd,
   RewardedAdEventType,
@@ -45,7 +47,8 @@ export default function App() {
   const loadRewarded = () => {
     try {
       const ad = RewardedAd.createForAdRequest(REWARDED_AD_ID, {
-        requestNonPersonalizedAdsOnly: false,
+        // Takip yok: yalnizca kisisellestirilmemis reklam iste (ATT gerekmez).
+        requestNonPersonalizedAdsOnly: true,
       });
       adRef.current = ad;
       adLoadedRef.current = false;
@@ -64,10 +67,7 @@ export default function App() {
       const asset = Asset.fromModule(require("./assets/game.html"));
       await asset.downloadAsync();
       setUri(asset.localUri ?? asset.uri);
-      // ATT izni (iOS) -> AdMob baslat -> ilk reklami yukle.
-      try {
-        await requestTrackingPermissionsAsync();
-      } catch {}
+      // AdMob baslat -> ilk reklami yukle. (ATT izni YOK -> takip yok.)
       try {
         await mobileAds().initialize();
         loadRewarded();
