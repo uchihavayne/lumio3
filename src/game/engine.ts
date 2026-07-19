@@ -63,6 +63,9 @@ export class Game {
   private elCombo!: HTMLElement;
   private elHint!: HTMLButtonElement;
   private elJar!: HTMLElement;
+  private elClue!: HTMLButtonElement;
+  /** İpucu şeridinde anlamı gösterilen (aranan) kelime. */
+  private clueWord: string | null = null;
   private cellEls = new Map<string, HTMLElement>();
 
   constructor(root: HTMLElement) {
@@ -141,6 +144,7 @@ export class Game {
         <button class="icon-btn" id="btn-sound">🔊</button>
       </div>
       <div class="board-wrap"><div class="board" id="board"></div></div>
+      <button class="clue-bar" id="clue" aria-label="Clue"></button>
       <div class="wheel-area">
         <div class="combo" id="combo"></div>
         <div class="preview" id="preview"></div>
@@ -157,6 +161,9 @@ export class Game {
     this.elCombo = this.q("#combo");
     this.elHint = this.q("#btn-hint");
     this.elJar = this.q("#jar");
+    this.elClue = this.q("#clue");
+    // İpucu şeridine dokun -> sıradaki bulunmamış kelimenin anlamına geç.
+    this.elClue.addEventListener("click", () => this.cycleClue());
 
     this.wheel = new Wheel({
       onPreview: (w) => this.onPreview(w),
@@ -723,6 +730,10 @@ export class Game {
     this.updateJar();
     this.updateCombo();
     this.updateProgress();
+    this.clueWord = null;
+    this.renderClue();
+    // İpucu şeridi görününce tahta kaplanabilir alanı değişir -> yeniden sığdır.
+    this.layoutBoard();
   }
 
   /** Yarim kalan seviyeyi kaydet (her kelime/ipucu sonrasi). */
@@ -781,22 +792,65 @@ export class Game {
     this.layoutBoard();
   }
 
-  /** Tahtadaki bir harfe dokunma: o hücreden geçen bulunmuş kelimenin anlamı. */
+  /**
+   * Tahtadaki bir harfe dokunma:
+   *  - BULUNMUŞ kelime -> anlamını gösterir (öğrenme).
+   *  - BULUNMAMIŞ kelime -> onu "aranan kelime" yapar; anlamı ipucu şeridine
+   *    gelir (oyuncu tanımdan kelimeyi bulur — oyunun özgün çekirdek mekaniği).
+   */
   private onCellTap(row: number, col: number) {
-    const el = this.cellEls.get(`${row},${col}`);
-    if (!el || !el.classList.contains("revealed")) return; // henüz açılmamış
-    // Bu hücreden geçen tüm yerleşik kelimelerden BULUNMUŞ olanları topla.
     const here = this.crossword.placed.filter((p) => {
       const dr = p.dir === "V" ? 1 : 0;
       const dc = p.dir === "H" ? 1 : 0;
       for (let i = 0; i < p.word.length; i++)
         if (p.row + dr * i === row && p.col + dc * i === col) return true;
       return false;
-    }).filter((p) => this.found.has(p.word));
+    });
     if (!here.length) return;
-    // Kesişim hücresiyse en uzun kelimeyi göster (daha bilgilendirici).
     here.sort((a, b) => b.word.length - a.word.length);
-    this.showDefinition(here[0].word, false);
+    const found = here.filter((p) => this.found.has(p.word));
+    if (found.length) {
+      this.showDefinition(found[0].word, false);
+    } else {
+      // Bulunmamış: ipucunu şeride getir.
+      this.clueWord = here[0].word;
+      this.renderClue();
+      this.sound.play("tap");
+    }
+  }
+
+  /** İpucu şeridi: aranan kelimenin ANLAMINI + harf sayısını gösterir. */
+  private renderClue() {
+    if (!this.elClue) return;
+    const unfound = this.crossword.placed.filter((p) => !this.found.has(p.word));
+    if (!unfound.length) {
+      this.elClue.classList.remove("show");
+      this.elClue.innerHTML = "";
+      this.clueWord = null;
+      return;
+    }
+    // Aktif kelime bulunduysa/ yoksa sıradaki bulunmamışa geç.
+    if (!this.clueWord || this.found.has(this.clueWord) ||
+        !unfound.some((p) => p.word === this.clueWord)) {
+      this.clueWord = unfound[0].word;
+    }
+    const def = defOf(getLang(), this.clueWord) ?? "";
+    const len = this.clueWord.length;
+    this.elClue.innerHTML =
+      `<span class="clue-ico">💡</span>` +
+      `<span class="clue-def">${def || t("clueTapHint")}</span>` +
+      `<span class="clue-len">${len}</span>`;
+    this.elClue.classList.add("show");
+  }
+
+  /** İpucu şeridine dokunma: sıradaki bulunmamış kelimeye döngüsel geç. */
+  private cycleClue() {
+    const unfound = this.crossword.placed.filter((p) => !this.found.has(p.word));
+    if (unfound.length <= 1) { this.renderClue(); return; }
+    const idx = unfound.findIndex((p) => p.word === this.clueWord);
+    this.clueWord = unfound[(idx + 1) % unfound.length].word;
+    this.renderClue();
+    this.sound.play("tap");
   }
 
   /**
@@ -902,6 +956,7 @@ export class Game {
       this.flyFireflies(word);
       this.persistMid();
       this.updateProgress();
+      this.renderClue();
       this.checkAchievements();
       this.checkComplete();
     } else if (isBonus && !this.bonus.has(word)) {

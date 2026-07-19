@@ -1,19 +1,21 @@
 :root {
-  --bg: #0b1026;
-  --bg2: #131a3a;
-  --bg-top: #1a2350;
-  --bg-bot: #070a1a;
+  /* İmza "fener gecesi" paleti: derin mor-lacivert gök + sıcak fener ışığı.
+     (Jenerik düz-mavi kelime oyunlarından görsel olarak ayrışır.) */
+  --bg: #120a2a;
+  --bg2: #1b1440;
+  --bg-top: #2a1c58;
+  --bg-bot: #0a0620;
   --glass: rgba(255, 255, 255, 0.06);
   --glass-line: rgba(255, 255, 255, 0.12);
-  --gold: #ffcf6b;
-  --amber: #f4a52a;
-  --text: #eef1ff;
-  --muted: #9aa3c7;
-  --good: #5be3a3;
+  --gold: #ffd47a;
+  --amber: #ff9d3d;
+  --text: #f2ecff;
+  --muted: #a99ecb;
+  --good: #6be3b4;
   --bad: #ff7b8a;
   --aur1: 91, 227, 163;
-  --aur2: 120, 130, 255;
-  --aur3: 244, 165, 42;
+  --aur2: 150, 120, 255;
+  --aur3: 255, 157, 61;
   --aurora: 0;
 }
 
@@ -335,8 +337,8 @@ body {
   font-size: clamp(20px, 6vw, 28px);
   font-weight: 800;
   color: var(--text);
-  background: linear-gradient(180deg, #2a3566, #1b2348);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, #3b2c66, #241a4a);
+  border: 1px solid rgba(255, 212, 122, 0.22);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   cursor: pointer;
   transition: transform 0.1s ease, background 0.1s ease, color 0.1s ease;
@@ -665,6 +667,52 @@ body {
 .score-chip:active { transform: scale(0.94); }
 .score-chip .trophy { font-size: 15px; }
 .level-badge { font-size: 16px; }
+
+/* ---------- İpucu şeridi (anlamdan kelime bul — çekirdek mekanik) ---------- */
+.clue-bar {
+  flex: none;
+  display: none;
+  align-items: center;
+  gap: 9px;
+  width: min(94%, 440px);
+  margin: 2px auto 0;
+  padding: 9px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 207, 107, 0.4);
+  background: linear-gradient(180deg, rgba(255, 207, 107, 0.14), rgba(255, 207, 107, 0.05));
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.12s ease;
+  animation: clue-in 0.3s ease;
+}
+.clue-bar.show { display: flex; }
+.clue-bar:active { transform: scale(0.98); }
+@keyframes clue-in { from { opacity: 0; transform: translateY(6px); } }
+.clue-ico { font-size: 19px; filter: drop-shadow(0 0 6px rgba(255, 207, 107, 0.7)); }
+.clue-def {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffe9be;
+}
+.clue-len {
+  flex: none;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #2a1a00;
+  background: linear-gradient(180deg, #ffe6a8, var(--gold));
+}
+body.big-text .clue-def { font-size: 17px; }
 
 /* ---------- Anlam popoveri ---------- */
 .defpop {
