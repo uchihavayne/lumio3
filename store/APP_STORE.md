@@ -21,35 +21,39 @@ iOS önce, Android sonra. Aşağıdaki metinleri App Store Connect'e yapıştır
 ## 2) Açıklama (Description — EN)
 
 ```
-Lumio is a calm, beautiful word puzzle. Swipe to connect letters, fill the
-crossword, and light up new words — with a cozy lantern-and-fireflies vibe.
+Lumio is a calm word game where you LEARN words, not just spell them. Read a
+word's meaning in the clue bar, then find that word by connecting letters — a
+crossword and a vocabulary lesson in one, under a cozy lantern-night sky.
 
-• Endless levels — never run out
+• Learn by playing: every puzzle shows a word's DEFINITION as the clue — find
+  the word from its meaning
+• Tap any solved word to review its meaning; saved to your personal notebook
 • 6 languages: English, Türkçe, Español, Deutsch, Français, Português
-• Learn as you play: tap any word to see its meaning + your word notebook
+• Endless levels — never run out
 • Daily Puzzle everyone shares, and a Word of the Day
-• Relaxed mode, large text & high-contrast options — friendly for everyone
-• Hints, a reveal-a-word joker, streaks, achievements and color themes
+• Relaxed mode, large text & high-contrast — friendly for older & casual players
 • Weekly leaderboard, offline play, no account needed
 
-No pressure, no timers — just you, the letters, and a quiet glow.
+No pressure, no timers — just you, the words, and a quiet glow.
 ```
 
 ## 3) Açıklama (Türkçe)
 
 ```
-Lumio sakin ve şık bir kelime bulmacası. Harfleri kaydırarak birleştir,
-crossword'ü doldur, yeni kelimeleri ışıklandır — fener ve ateşböceği atmosferiyle.
+Lumio, kelimeleri sadece yazmadığın, ÖĞRENDİĞİN sakin bir kelime oyunu. İpucu
+şeridinde kelimenin anlamını oku, sonra harfleri bağlayarak o kelimeyi bul —
+crossword ve kelime dersi bir arada, sıcak bir fener gecesi atmosferinde.
 
-• Sonsuz seviye — asla tükenmez
+• Oynayarak öğren: her bulmacada kelimenin ANLAMI ipucu olur — anlamdan kelimeyi
+  bul
+• Bulduğun kelimeye dokun, anlamını tekrar gör; kelime defterine kaydedilir
 • 6 dil: Türkçe, İngilizce, İspanyolca, Almanca, Fransızca, Portekizce
-• Oynarken öğren: kelimeye dokun, anlamını gör + kelime defteri
+• Sonsuz seviye — asla tükenmez
 • Herkese aynı Günlük Bulmaca ve Günün Kelimesi
-• Rahat mod, büyük yazı ve yüksek kontrast — herkes için dostça
-• İpucu, "kelimeyi aç" jokeri, seriler, başarımlar ve renk temaları
+• Rahat mod, büyük yazı ve yüksek kontrast — yaşlı ve sıradan oyunculara dostça
 • Haftalık lider tablosu, çevrimdışı oyun, hesap gerekmez
 
-Baskı yok, süre yok — sadece sen, harfler ve sakin bir ışıltı.
+Baskı yok, süre yok — sadece sen, kelimeler ve sakin bir ışıltı.
 ```
 
 ## 4) Zorunlu alanlar

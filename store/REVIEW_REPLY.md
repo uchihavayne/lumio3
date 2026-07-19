@@ -1,3 +1,61 @@
+# ⚠️⚠️ EN GÜNCEL (3. ret — 4.3 Spam): önce şunu oku
+
+Apple, oyunu "benzer klonlardan biri" (4.3 Spam) diye reddetti. Bunu aşmak için
+oyunu belirgin şekilde FARKLILAŞTIRDIK. Yapılacaklar:
+
+## A) Yeni build al ve gönder (mekanik + görsel değişti)
+```
+cd C:\Users\uchih\Downloads\stampd\harfika\native
+npx eas-cli build -p ios --profile production
+npx eas-cli submit -p ios --latest
+```
+
+## B) Ekran görüntülerini YENİLE
+`store/screenshots/tr` ve `/en` içindeki YENİ görüntüleri yükle (eskilerini sil).
+Bunlar yeni mor temayı ve "anlamdan kelime bul" ipucu mekaniğini gösteriyor —
+klon görünümünden çıktı.
+
+## C) İsim/altbaşlığı özgünleştir (spam tetikleyici jenerik terimlerden kaç)
+App Store Connect > App Information:
+- **İsim (öneri):** `Lumio: Learn Words` veya `Lumio — Word Learning`
+  (mevcut "Word Puzzle" çok jenerik; "Learn Words" özgün ve doğru konumlandırma)
+- **Altbaşlık (EN):** `Find words from their meaning`
+- **Altbaşlık (TR):** `Anlamdan kelimeyi bul`
+
+## D) Yeni build'i seç → App Review'a şu mesajı yaz (İngilizce):
+```
+Thank you for the feedback. We understand the concern about similarity to other
+word games, and we have substantially differentiated Lumio in both concept and
+design in this new build:
+
+1. CORE MECHANIC IS DIFFERENT. Lumio is a vocabulary-learning game, not a plain
+letter-connect game. A permanent "clue bar" always shows the DEFINITION and
+letter count of a target word; the player reads the meaning and then finds that
+word. Tapping any empty word on the board switches the clue to that word. Tapping
+a solved word teaches its meaning. This "find the word from its definition"
+mechanic is the heart of the game and is not present in the apps we are compared
+to — it turns the crossword into a language-learning tool.
+
+2. EDUCATIONAL PURPOSE. Every word has a short definition in the player's own
+language, and solved words are saved to a personal "notebook" for review. There
+is also a daily "Word of the Day". The goal is learning vocabulary, in 6
+languages (English, Turkish, Spanish, German, French, Portuguese).
+
+3. DISTINCT VISUAL IDENTITY. We use an original "lantern night" theme (deep
+purple night sky + warm lantern light) rather than the generic blue word-game
+look, with our own icon, palette, and UI.
+
+4. ACCESSIBILITY FOCUS. Large-text mode, high-contrast (color-blind friendly)
+mode, and a no-timer "relaxed" mode make it friendly for older and casual
+players — a deliberately different audience and tone.
+
+The source code and assets are our own original work; this is not a repackaged
+template. Updated screenshots showing the new mechanic and design are attached.
+We would be glad to provide anything else that helps.
+```
+
+---
+
 # ⚠️ GÜNCEL (2. ret — ATT): önce şunu oku
 
 Apple ikinci turda "ATT çerçevesi var ama izin penceresi görünmüyor" dedi.
