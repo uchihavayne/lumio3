@@ -1,6 +1,9 @@
-// Harf carki: harfleri daire seklinde dizer, parmakla/fareyle surukleyerek
-// harfleri birlestirip kelime olusturmayi saglar. Geri surukleyince son harfi
-// birakir (backtracking). pointerup'ta olusan kelimeyi callback ile bildirir.
+// "Feneri Yak" harf sistemi (özgün — sürükleme YOK).
+// Harfler çevrede ışıklı taşlar, MERKEZDE bir fener. Harflere tek tek DOKUNURSUN;
+// her harf ortadaki fenere bir ışık izi bırakır ve kelimeye eklenir. Seçili bir
+// harfe tekrar dokununca o harf ve sonrası geri alınır. Fener kelime hazır olunca
+// (>=2 harf) parlar; fenere dokununca kelimeyi "yakar" (gönderir).
+// Dokunmatik olması yaşlı/sıradan oyunculara sürüklemeden kolaydır.
 
 export interface WheelCallbacks {
   onPreview: (word: string) => void;
@@ -9,7 +12,6 @@ export interface WheelCallbacks {
 }
 
 interface TilePos {
-  el: HTMLElement;
   cx: number;
   cy: number;
 }
@@ -18,14 +20,14 @@ export class Wheel {
   readonly root: HTMLElement;
   private svg: SVGSVGElement;
   private line: SVGPolylineElement;
-  private endDot: SVGCircleElement;
+  private lantern!: HTMLButtonElement;
   private tiles: HTMLElement[] = [];
   private letters: string[] = [];
   private cb: WheelCallbacks;
 
-  private selecting = false;
   private selected: number[] = [];
   private tilePositions: TilePos[] = [];
+  private forbidden: string[] = [];
 
   constructor(cb: WheelCallbacks) {
     this.cb = cb;
@@ -36,7 +38,7 @@ export class Wheel {
     this.svg = document.createElementNS(NS, "svg");
     this.svg.setAttribute("class", "wheel-line");
 
-    // Gradyan tanimi (parlayan bag cizgisi).
+    // Işık izi gradyanı.
     const defs = document.createElementNS(NS, "defs");
     const grad = document.createElementNS(NS, "linearGradient");
     grad.setAttribute("id", "wheelGrad");
@@ -61,36 +63,25 @@ export class Wheel {
     this.line = document.createElementNS(NS, "polyline");
     this.line.setAttribute("class", "wheel-line-path");
     this.svg.appendChild(this.line);
-
-    this.endDot = document.createElementNS(NS, "circle");
-    this.endDot.setAttribute("class", "wheel-end-dot");
-    this.endDot.setAttribute("r", "0");
-    this.svg.appendChild(this.endDot);
-
     this.root.appendChild(this.svg);
 
-    this.root.addEventListener("pointerdown", this.onDown);
-    this.root.addEventListener("pointermove", this.onMove);
-    window.addEventListener("pointerup", this.onUp);
-    window.addEventListener("pointercancel", this.onUp);
+    // Merkez fener butonu.
+    this.lantern = document.createElement("button");
+    this.lantern.className = "wheel-lantern";
+    this.lantern.type = "button";
+    this.lantern.innerHTML = `<span class="wl-ico">🏮</span>`;
+    this.lantern.addEventListener("click", () => this.submit());
+    this.root.appendChild(this.lantern);
   }
 
-  private forbidden: string[] = [];
-
-  /**
-   * forbidden: bulmacadaki kelimeler — cark dizilisi bunlardan carkin tamamini
-   * kaplayanlari (ana kelime) cember uzerinde OKUNUR birakmamali; yoksa cevap
-   * bakar bakmaz gorunur (or. G-Ö-M-L-E-K sirali dizilirse).
-   */
   setLetters(letters: string[], forbidden: string[] = []) {
     this.letters = [...letters];
     this.forbidden = forbidden.filter((w) => w.length === letters.length);
     this.render();
   }
 
+  /** Harfleri karıştır — cevabı çember üzerinde okunur bırakmaz. */
   shuffle() {
-    // Yasakli kelimeyi (saat yonu veya tersi, herhangi bir baslangictan)
-    // heceleyen dizilisleri reddet; guvenli dizilis bulunana dek karistir.
     for (let tries = 0; tries < 40; tries++) {
       for (let i = this.letters.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -105,7 +96,7 @@ export class Wheel {
     const n = this.letters.length;
     if (!this.forbidden.length || n < 3) return false;
     const ring = this.letters.join("");
-    const cw = ring + ring; // dairesel okuma icin ikiye katla
+    const cw = ring + ring;
     const rev = [...this.letters].reverse().join("");
     const ccw = rev + rev;
     return this.forbidden.some((w) => cw.includes(w) || ccw.includes(w));
@@ -114,130 +105,98 @@ export class Wheel {
   private render() {
     this.tiles.forEach((t) => t.remove());
     this.tiles = [];
+    this.selected = [];
     const n = this.letters.length;
     this.letters.forEach((ch, i) => {
-      const tile = document.createElement("div");
+      const tile = document.createElement("button");
       tile.className = "wheel-tile";
+      tile.type = "button";
       tile.dataset.i = String(i);
       tile.textContent = ch;
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
-      // Yuzde cinsinden konumlandirma (cark kare kapsayicida).
-      const radius = 36; // % cinsinden merkezden uzaklik
+      const radius = 37;
       const x = 50 + radius * Math.cos(angle);
       const y = 50 + radius * Math.sin(angle);
       tile.style.left = `${x}%`;
       tile.style.top = `${y}%`;
+      tile.addEventListener("click", () => this.tapTile(i));
       this.root.appendChild(tile);
       this.tiles.push(tile);
     });
+    this.updateLantern();
+    this.drawLine();
   }
 
   private cacheTilePositions() {
+    const box = this.root.getBoundingClientRect();
     this.tilePositions = this.tiles.map((el) => {
       const r = el.getBoundingClientRect();
-      return { el, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+      return { cx: r.left + r.width / 2 - box.left, cy: r.top + r.height / 2 - box.top };
     });
   }
 
-  private tileAt(x: number, y: number): number {
-    let bestI = -1;
-    let bestD = Infinity;
-    this.tilePositions.forEach((p, i) => {
-      const d = Math.hypot(p.cx - x, p.cy - y);
-      if (d < bestD) {
-        bestD = d;
-        bestI = i;
-      }
-    });
-    // Sadece yakinsa (kutu yaricapi kadar) sec.
-    const tile = this.tilePositions[bestI];
-    if (!tile) return -1;
-    const radius = tile.el.getBoundingClientRect().width * 0.62;
-    return bestD <= radius ? bestI : -1;
-  }
-
-  private onDown = (e: PointerEvent) => {
-    this.cacheTilePositions();
-    const i = this.tileAt(e.clientX, e.clientY);
-    if (i === -1) return;
-    e.preventDefault();
-    this.selecting = true;
-    this.selected = [];
-    this.addTile(i);
-  };
-
-  private onMove = (e: PointerEvent) => {
-    if (!this.selecting) return;
-    e.preventDefault();
-    const i = this.tileAt(e.clientX, e.clientY);
-    if (i === -1) return;
-
+  /** Bir harfe dokunma: seçili değilse ekle; seçiliyse o harften itibaren geri al. */
+  private tapTile(i: number) {
     const pos = this.selected.indexOf(i);
     if (pos === -1) {
-      this.addTile(i);
-    } else if (pos === this.selected.length - 2) {
-      // Bir onceki harfe geri don -> sonuncuyu birak.
-      this.removeLast();
+      this.selected.push(i);
+      this.tiles[i].classList.add("active");
+      this.cb.onStep?.(this.selected.length - 1);
+      if (navigator.vibrate) navigator.vibrate(8);
+    } else {
+      // Bu harf ve sonrasını bırak (geri al).
+      for (let k = this.selected.length - 1; k >= pos; k--) {
+        this.tiles[this.selected[k]].classList.remove("active");
+      }
+      this.selected = this.selected.slice(0, pos);
     }
-    this.drawLine(e.clientX, e.clientY);
-  };
-
-  private onUp = () => {
-    if (!this.selecting) return;
-    this.selecting = false;
-    const word = this.selected.map((i) => this.letters[i]).join("");
-    const indices = [...this.selected];
-    this.clearSelection();
-    this.cb.onPreview("");
-    if (word.length >= 2) this.cb.onSubmit(word, indices);
-  };
-
-  private addTile(i: number) {
-    this.selected.push(i);
-    this.tiles[i].classList.add("active");
-    this.cb.onPreview(this.selected.map((k) => this.letters[k]).join(""));
-    this.cb.onStep?.(this.selected.length - 1);
+    this.cacheTilePositions();
     this.drawLine();
-    if (navigator.vibrate) navigator.vibrate(8);
+    this.updateLantern();
+    this.cb.onPreview(this.selected.map((k) => this.letters[k]).join(""));
   }
 
-  private removeLast() {
-    const i = this.selected.pop();
-    if (i !== undefined) this.tiles[i].classList.remove("active");
-    this.cb.onPreview(this.selected.map((k) => this.letters[k]).join(""));
+  private submit() {
+    const word = this.selected.map((i) => this.letters[i]).join("");
+    const indices = [...this.selected];
+    if (word.length < 2) {
+      this.lantern.classList.add("nudge");
+      setTimeout(() => this.lantern.classList.remove("nudge"), 300);
+      return;
+    }
+    this.clearSelection();
+    this.cb.onPreview("");
+    this.cb.onSubmit(word, indices);
   }
 
   private clearSelection() {
-    this.selected.forEach((i) => this.tiles[i].classList.remove("active"));
+    this.selected.forEach((i) => this.tiles[i]?.classList.remove("active"));
     this.selected = [];
     this.line.setAttribute("points", "");
-    this.endDot.setAttribute("r", "0");
+    this.updateLantern();
   }
 
-  private drawLine(px?: number, py?: number) {
+  private updateLantern() {
+    this.lantern.classList.toggle("ready", this.selected.length >= 2);
+    this.lantern.classList.toggle("has", this.selected.length > 0);
+  }
+
+  /** Işık izi: seçili harfler sırayla + son harften merkez fenere. */
+  private drawLine() {
+    if (!this.selected.length) {
+      this.line.setAttribute("points", "");
+      return;
+    }
+    if (!this.tilePositions.length) this.cacheTilePositions();
     const box = this.root.getBoundingClientRect();
+    const cx = box.width / 2;
+    const cy = box.height / 2;
     const pts = this.selected.map((i) => {
       const p = this.tilePositions[i];
-      return `${p.cx - box.left},${p.cy - box.top}`;
+      return `${p.cx},${p.cy}`;
     });
-    let endX: number | null = null;
-    let endY: number | null = null;
-    if (px !== undefined && py !== undefined && this.selecting) {
-      endX = px - box.left;
-      endY = py - box.top;
-      pts.push(`${endX},${endY}`);
-    } else if (this.selected.length) {
-      const p = this.tilePositions[this.selected[this.selected.length - 1]];
-      endX = p.cx - box.left;
-      endY = p.cy - box.top;
-    }
+    // Son harften fenere doğru ışık aksın.
+    pts.push(`${cx},${cy}`);
     this.line.setAttribute("points", pts.join(" "));
-    if (endX !== null && endY !== null && this.selected.length) {
-      this.endDot.setAttribute("cx", String(endX));
-      this.endDot.setAttribute("cy", String(endY));
-      this.endDot.setAttribute("r", "7");
-    } else {
-      this.endDot.setAttribute("r", "0");
-    }
   }
 }

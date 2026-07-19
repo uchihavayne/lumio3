@@ -300,10 +300,10 @@ body {
   aspect-ratio: 1;
   margin: 0 auto;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 212, 122, 0.05), rgba(255, 255, 255, 0.02) 70%);
   border: 1px solid var(--glass-line);
   box-shadow: inset 0 2px 30px rgba(0, 0, 0, 0.4), 0 10px 40px rgba(0, 0, 0, 0.4);
-  touch-action: none;
+  touch-action: manipulation;
 }
 .wheel-line {
   position: absolute;
@@ -316,20 +316,62 @@ body {
 .wheel-line-path {
   fill: none;
   stroke: url(#wheelGrad);
-  stroke-width: 10;
+  stroke-width: 6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 10px rgba(255, 207, 107, 0.85));
+  opacity: 0.85;
+  filter: drop-shadow(0 0 8px rgba(255, 207, 107, 0.8));
+  transition: opacity 0.15s ease;
 }
-.wheel-end-dot {
-  fill: #fff6df;
-  filter: drop-shadow(0 0 8px rgba(255, 207, 107, 0.95));
-  transition: r 0.08s ease;
+
+/* Merkez fener butonu — kelimeyi "yak" (gönder) */
+.wheel-lantern {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 212, 122, 0.35);
+  background: radial-gradient(circle at 50% 42%, rgba(59, 44, 102, 0.9), rgba(26, 15, 61, 0.95));
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: transform 0.12s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
+.wheel-lantern .wl-ico {
+  font-size: clamp(26px, 8vw, 38px);
+  filter: grayscale(0.4) opacity(0.6);
+  transition: filter 0.25s ease, transform 0.25s ease;
+}
+.wheel-lantern.ready {
+  border-color: rgba(255, 207, 107, 0.9);
+  background: radial-gradient(circle at 50% 42%, rgba(255, 207, 107, 0.28), rgba(59, 44, 102, 0.9));
+  box-shadow: 0 0 26px rgba(255, 207, 107, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: lantern-glow 1.6s ease-in-out infinite;
+}
+.wheel-lantern.ready .wl-ico {
+  filter: grayscale(0) opacity(1) drop-shadow(0 0 10px rgba(255, 207, 107, 0.9));
+  transform: scale(1.08);
+}
+.wheel-lantern:active { transform: translate(-50%, -50%) scale(0.92); }
+.wheel-lantern.nudge { animation: lantern-nudge 0.3s ease; }
+@keyframes lantern-glow {
+  50% { box-shadow: 0 0 36px rgba(255, 207, 107, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+}
+@keyframes lantern-nudge {
+  0%, 100% { transform: translate(-50%, -50%); }
+  25% { transform: translate(-54%, -50%); }
+  75% { transform: translate(-46%, -50%); }
+}
+
 .wheel-tile {
   position: absolute;
-  width: 19%;
-  height: 19%;
+  width: 21%;
+  height: 21%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   display: grid;
@@ -346,8 +388,8 @@ body {
 .wheel-tile.active {
   background: linear-gradient(180deg, #ffe6a8, var(--gold));
   color: #2a1a00;
-  transform: translate(-50%, -50%) scale(1.12);
-  box-shadow: 0 0 18px rgba(255, 207, 107, 0.8);
+  transform: translate(-50%, -50%) scale(1.14);
+  box-shadow: 0 0 20px rgba(255, 207, 107, 0.85);
 }
 
 /* ---------- Overlay / panel ---------- */
