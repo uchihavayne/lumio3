@@ -132,6 +132,24 @@ export class FireflyLayer {
     }
   }
 
+  /** Bir noktada (harf) yukarı süzülüp sönen küçük ışık parçacıkları. */
+  spark(x: number, y: number) {
+    for (let i = 0; i < 4; i++) {
+      this.flying.push({
+        x: x + (Math.random() - 0.5) * 16,
+        y: y + (Math.random() - 0.5) * 16,
+        px: x, py: y,
+        vx: (Math.random() - 0.5) * 1.1,
+        vy: -0.4 - Math.random() * 1.3,
+        phase: Math.random() * Math.PI * 2,
+        size: 1.5 + Math.random() * 1.8,
+        hue: 44 + Math.random() * 18,
+        life: 0,
+        max: 34 + Math.random() * 22,
+      });
+    }
+  }
+
   /** Seviye bitti — konfeti yagmuru. */
   celebrate() {
     const n = 120;

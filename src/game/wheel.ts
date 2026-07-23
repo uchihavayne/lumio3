@@ -1,14 +1,14 @@
-// "Feneri Yak" harf sistemi (özgün — sürükleme YOK).
-// Harfler çevrede ışıklı taşlar, MERKEZDE bir fener. Harflere tek tek DOKUNURSUN;
-// her harf ortadaki fenere bir ışık izi bırakır ve kelimeye eklenir. Seçili bir
-// harfe tekrar dokununca o harf ve sonrası geri alınır. Fener kelime hazır olunca
-// (>=2 harf) parlar; fenere dokununca kelimeyi "yakar" (gönderir).
-// Dokunmatik olması yaşlı/sıradan oyunculara sürüklemeden kolaydır.
+// Harf çarkı — akıcı SÜRÜKLEME girişi (en hızlı, en kullanıcı-dostu).
+// Harfler daire üzerinde; parmakla harften harfe sürükleyip kelime oluşturur,
+// bırakınca gönderir. Görsel kimlik özgün: mor gece + akan altın ışık izi +
+// harf pop'u + iz üstünde süzülen ateşböceği parçacıkları.
 
 export interface WheelCallbacks {
   onPreview: (word: string) => void;
   onSubmit: (word: string, indices: number[]) => void;
   onStep?: (order: number) => void;
+  /** İz üstünde ışık parçacığı (ekran koordinatları). */
+  onSpark?: (x: number, y: number) => void;
 }
 
 interface TilePos {
@@ -20,11 +20,11 @@ export class Wheel {
   readonly root: HTMLElement;
   private svg: SVGSVGElement;
   private line: SVGPolylineElement;
-  private lantern!: HTMLButtonElement;
   private tiles: HTMLElement[] = [];
   private letters: string[] = [];
   private cb: WheelCallbacks;
 
+  private selecting = false;
   private selected: number[] = [];
   private tilePositions: TilePos[] = [];
   private forbidden: string[] = [];
@@ -38,7 +38,6 @@ export class Wheel {
     this.svg = document.createElementNS(NS, "svg");
     this.svg.setAttribute("class", "wheel-line");
 
-    // Işık izi gradyanı.
     const defs = document.createElementNS(NS, "defs");
     const grad = document.createElementNS(NS, "linearGradient");
     grad.setAttribute("id", "wheelGrad");
@@ -65,13 +64,10 @@ export class Wheel {
     this.svg.appendChild(this.line);
     this.root.appendChild(this.svg);
 
-    // Merkez fener butonu.
-    this.lantern = document.createElement("button");
-    this.lantern.className = "wheel-lantern";
-    this.lantern.type = "button";
-    this.lantern.innerHTML = `<span class="wl-ico">🏮</span>`;
-    this.lantern.addEventListener("click", () => this.submit());
-    this.root.appendChild(this.lantern);
+    this.root.addEventListener("pointerdown", this.onDown);
+    this.root.addEventListener("pointermove", this.onMove);
+    window.addEventListener("pointerup", this.onUp);
+    window.addEventListener("pointercancel", this.onUp);
   }
 
   setLetters(letters: string[], forbidden: string[] = []) {
@@ -80,7 +76,6 @@ export class Wheel {
     this.render();
   }
 
-  /** Harfleri karıştır — cevabı çember üzerinde okunur bırakmaz. */
   shuffle() {
     for (let tries = 0; tries < 40; tries++) {
       for (let i = this.letters.length - 1; i > 0; i--) {
@@ -108,9 +103,8 @@ export class Wheel {
     this.selected = [];
     const n = this.letters.length;
     this.letters.forEach((ch, i) => {
-      const tile = document.createElement("button");
+      const tile = document.createElement("div");
       tile.className = "wheel-tile";
-      tile.type = "button";
       tile.dataset.i = String(i);
       tile.textContent = ch;
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
@@ -119,84 +113,109 @@ export class Wheel {
       const y = 50 + radius * Math.sin(angle);
       tile.style.left = `${x}%`;
       tile.style.top = `${y}%`;
-      tile.addEventListener("click", () => this.tapTile(i));
       this.root.appendChild(tile);
       this.tiles.push(tile);
     });
-    this.updateLantern();
-    this.drawLine();
+    this.line.setAttribute("points", "");
   }
 
   private cacheTilePositions() {
-    const box = this.root.getBoundingClientRect();
     this.tilePositions = this.tiles.map((el) => {
       const r = el.getBoundingClientRect();
-      return { cx: r.left + r.width / 2 - box.left, cy: r.top + r.height / 2 - box.top };
+      return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
     });
   }
 
-  /** Bir harfe dokunma: seçili değilse ekle; seçiliyse o harften itibaren geri al. */
-  private tapTile(i: number) {
-    const pos = this.selected.indexOf(i);
-    if (pos === -1) {
-      this.selected.push(i);
-      this.tiles[i].classList.add("active");
-      this.cb.onStep?.(this.selected.length - 1);
-      if (navigator.vibrate) navigator.vibrate(8);
-    } else {
-      // Bu harf ve sonrasını bırak (geri al).
-      for (let k = this.selected.length - 1; k >= pos; k--) {
-        this.tiles[this.selected[k]].classList.remove("active");
+  private tileAt(x: number, y: number): number {
+    let bestI = -1;
+    let bestD = Infinity;
+    this.tilePositions.forEach((p, i) => {
+      const d = Math.hypot(p.cx - x, p.cy - y);
+      if (d < bestD) {
+        bestD = d;
+        bestI = i;
       }
-      this.selected = this.selected.slice(0, pos);
-    }
-    this.cacheTilePositions();
-    this.drawLine();
-    this.updateLantern();
-    this.cb.onPreview(this.selected.map((k) => this.letters[k]).join(""));
+    });
+    const tile = this.tiles[bestI];
+    if (!tile) return -1;
+    const radius = tile.getBoundingClientRect().width * 0.68;
+    return bestD <= radius ? bestI : -1;
   }
 
-  private submit() {
-    const word = this.selected.map((i) => this.letters[i]).join("");
-    const indices = [...this.selected];
-    if (word.length < 2) {
-      this.lantern.classList.add("nudge");
-      setTimeout(() => this.lantern.classList.remove("nudge"), 300);
+  private onDown = (e: PointerEvent) => {
+    this.cacheTilePositions();
+    const i = this.tileAt(e.clientX, e.clientY);
+    if (i === -1) return;
+    e.preventDefault();
+    this.selecting = true;
+    this.selected = [];
+    this.addTile(i);
+  };
+
+  private onMove = (e: PointerEvent) => {
+    if (!this.selecting) return;
+    e.preventDefault();
+    const i = this.tileAt(e.clientX, e.clientY);
+    if (i === -1) {
+      this.drawLine(e.clientX, e.clientY);
       return;
     }
+    const pos = this.selected.indexOf(i);
+    if (pos === -1) {
+      this.addTile(i);
+    } else if (pos === this.selected.length - 2) {
+      this.removeLast();
+    }
+    this.drawLine(e.clientX, e.clientY);
+  };
+
+  private onUp = () => {
+    if (!this.selecting) return;
+    this.selecting = false;
+    const word = this.selected.map((i) => this.letters[i]).join("");
+    const indices = [...this.selected];
     this.clearSelection();
     this.cb.onPreview("");
-    this.cb.onSubmit(word, indices);
+    if (word.length >= 2) this.cb.onSubmit(word, indices);
+  };
+
+  private addTile(i: number) {
+    this.selected.push(i);
+    const tile = this.tiles[i];
+    tile.classList.add("active");
+    tile.classList.remove("pop");
+    void tile.offsetWidth;
+    tile.classList.add("pop");
+    this.cb.onPreview(this.selected.map((k) => this.letters[k]).join(""));
+    this.cb.onStep?.(this.selected.length - 1);
+    // İz üstünde ışık parçacığı
+    const p = this.tilePositions[i];
+    if (p) this.cb.onSpark?.(p.cx, p.cy);
+    this.drawLine();
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  private removeLast() {
+    const i = this.selected.pop();
+    if (i !== undefined) this.tiles[i].classList.remove("active");
+    this.cb.onPreview(this.selected.map((k) => this.letters[k]).join(""));
   }
 
   private clearSelection() {
     this.selected.forEach((i) => this.tiles[i]?.classList.remove("active"));
     this.selected = [];
     this.line.setAttribute("points", "");
-    this.updateLantern();
   }
 
-  private updateLantern() {
-    this.lantern.classList.toggle("ready", this.selected.length >= 2);
-    this.lantern.classList.toggle("has", this.selected.length > 0);
-  }
-
-  /** Işık izi: seçili harfler sırayla + son harften merkez fenere. */
-  private drawLine() {
-    if (!this.selected.length) {
-      this.line.setAttribute("points", "");
-      return;
-    }
-    if (!this.tilePositions.length) this.cacheTilePositions();
+  private drawLine(px?: number, py?: number) {
     const box = this.root.getBoundingClientRect();
-    const cx = box.width / 2;
-    const cy = box.height / 2;
     const pts = this.selected.map((i) => {
       const p = this.tilePositions[i];
-      return `${p.cx},${p.cy}`;
+      return `${p.cx - box.left},${p.cy - box.top}`;
     });
-    // Son harften fenere doğru ışık aksın.
-    pts.push(`${cx},${cy}`);
+    if (px !== undefined && py !== undefined && this.selecting && this.selected.length) {
+      pts.push(`${px - box.left},${py - box.top}`);
+    }
     this.line.setAttribute("points", pts.join(" "));
   }
 }

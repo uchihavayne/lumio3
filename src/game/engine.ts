@@ -169,6 +169,7 @@ export class Game {
       onPreview: (w) => this.onPreview(w),
       onSubmit: (w) => this.onSubmit(w),
       onStep: (order) => this.sound.step(order),
+      onSpark: (x, y) => this.fx.spark(x, y),
     });
     this.q("#wheel-host").appendChild(this.wheel.root);
 
